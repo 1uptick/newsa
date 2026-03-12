@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ff7900;
+  --color-primary-light: #ff9d4d;
+  --color-primary-dark: #cc6100;
+  --color-secondary: #64e3e6;
+  --color-secondary-light: #8aebed;
+  --color-secondary-dark: #3dd4d8;
+  --background-yellow-gradient: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+  --color-a: var(--color-primary);
+  --color-a-hover: var(--color-primary-dark);
+  --color-page-bg: #f1f5f9;
+
+  /* Darker slate palette for global font color */
+  --color-slate-50: #f1f5f9;
+  --color-slate-100: #e2e8f0;
+  --color-slate-200: #cbd5e1;
+  --color-slate-300: #94a3b8;
+  --color-slate-400: #64748b;
+  --color-slate-500: #475569;
+  --color-slate-600: #334155;
+  --color-slate-700: #1e293b;
+  --color-slate-800: #0f172a;
+  --color-slate-900: #020617;
+  --color-slate-950: #01040a;
+}
+
+body {
+  background-color: var(--color-page-bg);
+  @apply text-slate-900 font-sans;
+}
+
+/* Theme color for links (exclude nav so nav can use white/active styling) */
+a:not(nav a) {
+  color: var(--color-a);
+}
+a:not(nav a):hover {
+  color: var(--color-a-hover);
+}
+
+.yellow-gradient {
+  background: var(--background-yellow-gradient);
+}
+
+.btn-primary {
+  @apply bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg transition-colors;
+}
+
+.card {
+  @apply bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden;
+}
+
+/* Rich HTML in Capital page right column (darker text) */
+.capital-detail.html-content {
+  font-family: inherit;
+  line-height: 1.6;
+  color: #1e293b;
+}
+.capital-detail.html-content h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #020617;
+  line-height: 1.3;
+}
+.capital-detail.html-content h1:first-child {
+  margin-top: 0;
+}
+.capital-detail.html-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #020617;
+  line-height: 1.4;
+}
+.capital-detail.html-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+.capital-detail.html-content h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.375rem;
+  color: #0f172a;
+}
+.capital-detail.html-content p {
+  margin-bottom: 0.75rem;
+  color: #334155;
+}
+.capital-detail.html-content p:last-child {
+  margin-bottom: 0;
+}
+.capital-detail.html-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.capital-detail.html-content a:hover {
+  color: var(--color-primary-dark);
+}
+.capital-detail.html-content strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+.capital-detail.html-content ul,
+.capital-detail.html-content ol {
+  margin: 0.5rem 0 0.75rem 1.25rem;
+  padding: 0;
+}
+.capital-detail.html-content li {
+  margin-bottom: 0.25rem;
+}
+.capital-detail.html-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+.capital-detail.html-content th,
+.capital-detail.html-content td {
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.capital-detail.html-content th {
+  font-weight: 600;
+  background: #f8fafc;
+  color: #020617;
+}
+.capital-detail.html-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem 0;
+}
+.capital-detail.html-content div {
+  margin-bottom: 0.5rem;
+}
