@@ -23,7 +23,6 @@
     "@vitejs/plugin-react": "^5.0.4",
     "airtable": "^0.12.2",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.4.1",
     "clsx": "^2.1.1",
     "compression": "^1.8.1",
     "dompurify": "^3.3.3",

@@ -93,7 +93,7 @@ export default function RegisterPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[550px] card p-8"
+        className="w-full max-w-[480px] card p-8"
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Join Newsa</h1>

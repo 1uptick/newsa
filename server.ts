@@ -3,7 +3,6 @@ import multer from "multer";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
 import Airtable from "airtable";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
@@ -13,6 +12,7 @@ import admin from "firebase-admin";
 import nodemailer from "nodemailer";
 import { config, isAirtableConfigured, isSupabaseConfigured, isOpenRouterConfigured } from "./server/config.js";
 import { cache, CACHE_KEYS, CACHE_TTL } from "./server/cache.js";
+import * as db from "./server/db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,77 +67,25 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Database setup
-const db = new Database("newsa.db");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS invitations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code TEXT UNIQUE,
-    role TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('admin', 'client')),
-    used INTEGER DEFAULT 0,
-    email TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS user_roles (
-    firebase_uid TEXT PRIMARY KEY,
-    role TEXT NOT NULL CHECK (role IN ('admin', 'client')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    token TEXT PRIMARY KEY,
-    email TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-// Add role column to existing invitations if missing
-try {
-  db.prepare("ALTER TABLE invitations ADD COLUMN role TEXT DEFAULT 'client'").run();
-} catch {}
-try {
-  db.prepare("ALTER TABLE invitations ADD COLUMN email TEXT").run();
-} catch {}
-try {
-  db.prepare("ALTER TABLE invitations ADD COLUMN group_id INTEGER REFERENCES groups(id)").run();
-} catch {}
-try {
-  db.prepare("ALTER TABLE user_roles ADD COLUMN group_id INTEGER REFERENCES groups(id)").run();
-} catch {}
-try {
-  db.prepare("ALTER TABLE user_roles ADD COLUMN email TEXT").run();
-} catch {}
-
-// Performance: Add indexes for frequently queried columns
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_invitations_code_used ON invitations(code, used);
-  CREATE INDEX IF NOT EXISTS idx_invitations_created_at ON invitations(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_user_roles_group_id ON user_roles(group_id);
-  CREATE INDEX IF NOT EXISTS idx_user_roles_created_at ON user_roles(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens(expires_at);
-`);
-
-// Seed initial invitation if empty
-const inviteCount: any = db.prepare("SELECT COUNT(*) as count FROM invitations").get();
-if (inviteCount.count === 0) {
-  db.prepare("INSERT INTO invitations (code, role) VALUES (?, ?)").run("WELCOME-NEWSA", "client");
-  console.log("Seeded initial invitation code: WELCOME-NEWSA (client)");
+// Require Supabase for auth, groups, invitations (Option B: no SQLite)
+if (!isSupabaseConfigured) {
+  console.error("Supabase is required. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env");
+  process.exit(1);
 }
 
-// Ensure initial admin(s) by email (Firebase Auth must have the user already)
+// Seed Supabase tables and initial admin (async, no blocking)
 (async () => {
+  try {
+    const seeded = await db.seedInvitation("WELCOME-NEWSA", "client");
+    if (seeded) console.log("Seeded initial invitation code: WELCOME-NEWSA (client)");
+  } catch (e) {
+    console.warn("Seed invitation:", (e as Error).message);
+  }
   if (admin.apps?.length && config.initialAdminEmails.length > 0) {
     for (const email of config.initialAdminEmails) {
       try {
         const user = await admin.auth().getUserByEmail(email);
-        db.prepare("INSERT OR REPLACE INTO user_roles (firebase_uid, role) VALUES (?, ?)").run(
-          user.uid,
-          "admin"
-        );
+        await db.upsertUserRole({ firebase_uid: user.uid, role: "admin" });
         console.log("Initial admin set:", email);
       } catch (e) {
         console.warn("Initial admin not found in Firebase (register first):", email);
@@ -492,7 +440,7 @@ async function authenticateToken(
   try {
     const decoded = await admin.auth().verifyIdToken(token);
     const uid = decoded.uid;
-    const row: any = db.prepare("SELECT role FROM user_roles WHERE firebase_uid = ?").get(uid);
+    const row = await db.getUserRole(uid);
     (req as any).uid = uid;
     (req as any).userEmail = decoded.email ?? null;
     (req as any).role = row?.role ?? null;
@@ -832,12 +780,10 @@ apiRouter.get("/auth/status", (_req, res) => {
   });
 });
 
-apiRouter.post("/auth/verify-invitation", authLimiter, (req, res) => {
+apiRouter.post("/auth/verify-invitation", authLimiter, async (req, res) => {
   const { invitationCode } = req.body;
   const code = typeof invitationCode === "string" ? invitationCode.trim().toUpperCase() : "";
-  const invitation: any = db
-    .prepare("SELECT * FROM invitations WHERE code = ? AND used = 0")
-    .get(code);
+  const invitation = await db.getInvitationByCodeUnused(code);
 
   if (!invitation) {
     return res.status(400).json({ error: "Invalid or used invitation code" });
@@ -861,17 +807,15 @@ apiRouter.post("/auth/use-invitation", authLimiter, async (req, res) => {
 
   const { invitationCode } = req.body;
   const code = typeof invitationCode === "string" ? invitationCode.trim().toUpperCase() : "";
-  const invitation: any = db
-    .prepare("SELECT * FROM invitations WHERE code = ? AND used = 0")
-    .get(code);
+  const invitation = await db.getInvitationByCodeUnused(code);
 
   if (!invitation) {
     return res.status(400).json({ error: "Invalid or used invitation" });
   }
   const role = invitation.role || "client";
   const groupId = invitation.group_id ?? null;
-  db.prepare("UPDATE invitations SET used = 1 WHERE id = ?").run(invitation.id);
-  db.prepare("INSERT OR REPLACE INTO user_roles (firebase_uid, role, group_id, email) VALUES (?, ?, ?, ?)").run(uid, role, groupId, userEmail);
+  await db.markInvitationUsed(invitation.id);
+  await db.upsertUserRole({ firebase_uid: uid, role, group_id: groupId, email: userEmail });
   res.json({ success: true, role, groupId });
 });
 
@@ -893,11 +837,7 @@ apiRouter.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) 
     if (user) {
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
-      db.prepare("INSERT INTO password_reset_tokens (token, email, expires_at) VALUES (?, ?, ?)").run(
-        token,
-        email,
-        expiresAt
-      );
+      await db.insertPasswordResetToken({ token, email, expires_at: expiresAt });
       const base = appBaseUrl.replace(/\/$/, "");
       const resetUrl = `${base}/reset-password?token=${encodeURIComponent(token)}`;
       const sendResult = await sendForgotPasswordEmail(email, resetUrl);
@@ -933,18 +873,18 @@ apiRouter.post("/auth/reset-password", authLimiter, async (req, res) => {
   if (!admin.apps?.length) {
     return res.status(503).json({ error: "Auth not configured." });
   }
-  const row: any = db.prepare("SELECT email, expires_at FROM password_reset_tokens WHERE token = ?").get(tokenStr);
+  const row = await db.getPasswordResetToken(tokenStr);
   if (!row) {
     return res.status(400).json({ error: "Invalid or expired reset link. Please request a new one." });
   }
   if (new Date(row.expires_at) < new Date()) {
-    db.prepare("DELETE FROM password_reset_tokens WHERE token = ?").run(tokenStr);
+    await db.deletePasswordResetToken(tokenStr);
     return res.status(400).json({ error: "This reset link has expired. Please request a new one." });
   }
   try {
     const user = await admin.auth().getUserByEmail(row.email);
     await admin.auth().updateUser(user.uid, { password });
-    db.prepare("DELETE FROM password_reset_tokens WHERE token = ?").run(tokenStr);
+    await db.deletePasswordResetToken(tokenStr);
     res.json({ success: true, message: "Password updated. You can sign in with your new password." });
   } catch (e: any) {
     console.error("Reset password error:", e);
@@ -952,11 +892,9 @@ apiRouter.post("/auth/reset-password", authLimiter, async (req, res) => {
   }
 });
 
-apiRouter.get("/auth/me", authenticateToken, (req, res) => {
+apiRouter.get("/auth/me", authenticateToken, async (req, res) => {
   const uid = (req as any).uid;
-  const row: any = db.prepare(
-    "SELECT ur.role, ur.group_id, g.name AS group_name FROM user_roles ur LEFT JOIN groups g ON ur.group_id = g.id WHERE ur.firebase_uid = ?"
-  ).get(uid);
+  const row = await db.getAuthMe(uid);
   res.json({
     uid,
     email: (req as any).userEmail,
@@ -982,23 +920,22 @@ apiRouter.delete("/admin/cache/:key", authenticateToken, requireAdmin, (req, res
   res.json({ ok: true, cleared: key });
 });
 
-apiRouter.get("/admin/groups", authenticateToken, requireAdmin, (_req, res) => {
-  const rows = db.prepare("SELECT id, name, created_at FROM groups ORDER BY name ASC").all();
+apiRouter.get("/admin/groups", authenticateToken, requireAdmin, async (_req, res) => {
+  const rows = await db.listGroups();
   res.json(rows);
 });
 
-apiRouter.post("/admin/groups", authenticateToken, requireAdmin, (req, res) => {
+apiRouter.post("/admin/groups", authenticateToken, requireAdmin, async (req, res) => {
   const { name } = req.body;
   const nameStr = typeof name === "string" ? name.trim() : "";
   if (!nameStr) {
     return res.status(400).json({ error: "Group name is required" });
   }
   try {
-    const result = db.prepare("INSERT INTO groups (name) VALUES (?)").run(nameStr);
-    const row: any = db.prepare("SELECT id, name, created_at FROM groups WHERE id = ?").get(result.lastInsertRowid);
+    const row = await db.insertGroup(nameStr);
     res.status(201).json(row);
   } catch (e: any) {
-    if (e?.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (e?.message === "UNIQUE_GROUP_NAME") {
       return res.status(400).json({ error: "A group with this name already exists" });
     }
     throw e;
@@ -1014,12 +951,7 @@ apiRouter.post("/admin/invite", authenticateToken, requireAdmin, async (req, res
   }
   const code = Math.random().toString(36).substring(2, 10).toUpperCase();
   const emailStr = typeof email === "string" ? email.trim() : null;
-  db.prepare("INSERT INTO invitations (code, role, email, group_id) VALUES (?, ?, ?, ?)").run(
-    code,
-    r,
-    emailStr,
-    gid
-  );
+  const row = await db.insertInvitation({ code, role: r, email: emailStr, group_id: gid });
   let emailSent = false;
   let emailError: string | undefined;
   if (emailStr && mailTransporter) {
@@ -1027,59 +959,46 @@ apiRouter.post("/admin/invite", authenticateToken, requireAdmin, async (req, res
     emailSent = sendResult.sent;
     if (!sendResult.sent) emailError = sendResult.error;
   }
-  const row: any = db.prepare("SELECT id, code, role, email, group_id FROM invitations WHERE code = ?").get(code);
   res.json({ code: row.code, role: r, email: emailStr, emailSent, emailError: emailError ?? null, groupId: row.group_id ?? null });
 });
 
-apiRouter.get("/admin/invitations", authenticateToken, requireAdmin, (_req, res) => {
-  const rows = db.prepare(
-    `SELECT i.id, i.code, i.role, i.used, i.email, i.created_at, i.group_id, g.name AS group_name
-     FROM invitations i LEFT JOIN groups g ON i.group_id = g.id
-     ORDER BY i.created_at DESC`
-  ).all();
+apiRouter.get("/admin/invitations", authenticateToken, requireAdmin, async (_req, res) => {
+  const rows = await db.listInvitations();
   res.json(rows);
 });
 
-apiRouter.delete("/admin/invitations/:id", authenticateToken, requireAdmin, (req, res) => {
+apiRouter.delete("/admin/invitations/:id", authenticateToken, requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id < 1) {
     return res.status(400).json({ error: "Invalid invitation id" });
   }
-  const result = db.prepare("DELETE FROM invitations WHERE id = ?").run(id);
-  if (result.changes === 0) {
+  const deleted = await db.deleteInvitation(id);
+  if (!deleted) {
     return res.status(404).json({ error: "Invitation not found" });
   }
   res.json({ ok: true, deleted: id });
 });
 
 apiRouter.get("/admin/users", authenticateToken, requireAdmin, async (_req, res) => {
-  const rows: any[] = db.prepare(
-    `SELECT ur.firebase_uid, ur.email, ur.role, ur.group_id, ur.created_at, g.name AS group_name
-     FROM user_roles ur LEFT JOIN groups g ON ur.group_id = g.id
-     ORDER BY ur.created_at DESC`
-  ).all();
+  const rows = await db.listUserRolesWithGroups();
+  const result = rows.map((r) => ({ ...r, last_login: null as string | null }));
   if (admin.apps?.length) {
-    for (const row of rows) {
+    for (const row of result) {
       if (row.firebase_uid) {
         try {
           const userRecord = await admin.auth().getUser(row.firebase_uid);
           if (!row.email && userRecord?.email) {
             row.email = userRecord.email;
-            db.prepare("UPDATE user_roles SET email = ? WHERE firebase_uid = ?").run(userRecord.email, row.firebase_uid);
+            await db.updateUserRoleEmail(row.firebase_uid, userRecord.email);
           }
-          const lastSignIn = userRecord?.metadata?.lastSignInTime;
-          row.last_login = lastSignIn || null;
+          row.last_login = userRecord?.metadata?.lastSignInTime ?? null;
         } catch {
           row.last_login = null;
         }
-      } else {
-        row.last_login = null;
       }
     }
-  } else {
-    rows.forEach((row) => { row.last_login = null; });
   }
-  res.json(rows);
+  res.json(result);
 });
 
 apiRouter.delete("/admin/users/:uid", authenticateToken, requireAdmin, async (req, res) => {
@@ -1091,7 +1010,7 @@ apiRouter.delete("/admin/users/:uid", authenticateToken, requireAdmin, async (re
   if (uid === currentUid) {
     return res.status(400).json({ error: "You cannot delete your own account" });
   }
-  const row = db.prepare("SELECT firebase_uid FROM user_roles WHERE firebase_uid = ?").get(uid);
+  const row = await db.getUserRoleByUid(uid);
   if (!row) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -1105,7 +1024,7 @@ apiRouter.delete("/admin/users/:uid", authenticateToken, requireAdmin, async (re
       error: e?.message?.includes("not found") ? "User not found in auth" : "Failed to delete user from authentication",
     });
   }
-  db.prepare("DELETE FROM user_roles WHERE firebase_uid = ?").run(uid);
+  await db.deleteUserRole(uid);
   res.json({ ok: true, deleted: uid });
 });
 
@@ -1604,22 +1523,21 @@ apiRouter.post("/capital/upload-image", uploadLimiter, authenticateToken, upload
 });
 
 // Explicit /api/admin/groups routes on app so they always match (before router mount)
-app.get("/api/admin/groups", authenticateToken, requireAdmin, (_req: express.Request, res: express.Response) => {
-  const rows = db.prepare("SELECT id, name, created_at FROM groups ORDER BY name ASC").all();
+app.get("/api/admin/groups", authenticateToken, requireAdmin, async (_req: express.Request, res: express.Response) => {
+  const rows = await db.listGroups();
   res.json(rows);
 });
-app.post("/api/admin/groups", authenticateToken, requireAdmin, (req: express.Request, res: express.Response) => {
+app.post("/api/admin/groups", authenticateToken, requireAdmin, async (req: express.Request, res: express.Response) => {
   const { name } = req.body;
   const nameStr = typeof name === "string" ? name.trim() : "";
   if (!nameStr) {
     return res.status(400).json({ error: "Group name is required" });
   }
   try {
-    const result = db.prepare("INSERT INTO groups (name) VALUES (?)").run(nameStr);
-    const row: any = db.prepare("SELECT id, name, created_at FROM groups WHERE id = ?").get(result.lastInsertRowid);
+    const row = await db.insertGroup(nameStr);
     res.status(201).json(row);
   } catch (e: any) {
-    if (e?.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (e?.message === "UNIQUE_GROUP_NAME") {
       return res.status(400).json({ error: "A group with this name already exists" });
     }
     throw e;
