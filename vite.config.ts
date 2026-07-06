@@ -1,11 +1,13 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({ mode }) => {
   // Do NOT inject any API keys or secrets here. All secrets stay on the server (see server/config.ts).
   // Only VITE_* env vars are exposed to the client; use them only for public config (e.g. VITE_API_BASE_URL, VITE_FIREBASE_*).
+  const env = loadEnv(mode, process.cwd(), '');
+  const devApiPort = env.PORT || '5001';
   return {
     base: '/',
     plugins: [react(), tailwindcss()],
@@ -13,6 +15,8 @@ export default defineConfig(({mode}) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      // Avoid duplicate React copies (would break Context: "useAuth must be used within AuthProvider").
+      dedupe: ['react', 'react-dom'],
     },
     build: {
       rollupOptions: {
@@ -38,6 +42,17 @@ export default defineConfig(({mode}) => {
       chunkSizeWarningLimit: 400,
     },
     server: {
+      // When you run `vite` alone (port 5173), forward /api to Express (`npm run dev` uses PORT, default 5001).
+      // Production uses Firebase Hosting rewrites; integrated dev uses only http://localhost:5001 — no proxy needed there.
+      proxy: {
+        '/api': {
+          target: `http://127.0.0.1:${devApiPort}`,
+          changeOrigin: true,
+          // Research report SSE can run several minutes (tools + LLM).
+          timeout: 600_000,
+          proxyTimeout: 600_000,
+        },
+      },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true' ? { port: process.env.VITE_HMR_PORT ? Number(process.env.VITE_HMR_PORT) : 24679 } : false,

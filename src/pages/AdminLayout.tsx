@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { UserPlus, Users } from "lucide-react";
+import { Coins, UserPlus, Users } from "lucide-react";
 
 export default function AdminLayout() {
   return (
@@ -36,6 +36,19 @@ export default function AdminLayout() {
             >
               <Users className="w-4 h-4" />
               Users
+            </NavLink>
+            <NavLink
+              to="/admin/brokerage-tokens"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`
+              }
+            >
+              <Coins className="w-4 h-4" />
+              Brokerage tokens
             </NavLink>
           </nav>
         </div>

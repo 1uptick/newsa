@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Newspaper, PenTool, ChevronRight, Loader2, Plus, X, ChevronDown, Hash, Share2, Target, Zap, TrendingUp, MessageSquare, Check, Sparkles } from "lucide-react";
+import { Newspaper, PenTool, ChevronRight, Loader2, Plus, X, Hash, Share2, Target, Zap, TrendingUp, MessageSquare, Check, Sparkles, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../../contexts/AuthContext";
+import { Toast } from "../../components/Toast";
 import type { CapitalKeywordItem } from "./types";
 import { formatCreateDate } from "./types";
+import { topicSourcePillClass } from "../../lib/topicSourcePill";
+import { WrappingTextField } from "../../components/WrappingTextField";
+import { TrendingBubbleChart } from "../../components/TrendingBubbleChart";
+import { parseTrendingKeywords } from "../../lib/trendingKeywords";
+import { ContentAreaLoader } from "../../components/ContentAreaLoader";
 
 const LAZY_PAGE_SIZE = 12;
 
 export default function CapitalApprovalPage() {
-  const { authFetch } = useAuth();
+  const { authFetch, role } = useAuth();
   const [items, setItems] = useState<CapitalKeywordItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -19,15 +25,33 @@ export default function CapitalApprovalPage() {
   const [selectedNews, setSelectedNews] = useState<CapitalKeywordItem[]>([]);
   const [dropZoneActive, setDropZoneActive] = useState(false);
   const [additionalContext, setAdditionalContext] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editItem, setEditItem] = useState<CapitalKeywordItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CapitalKeywordItem | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [unapprovingId, setUnapprovingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<"approve" | "reject" | null>(null);
+  const [commentsDraft, setCommentsDraft] = useState("");
+  const [draftSource, setDraftSource] = useState("");
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftSummary, setDraftSummary] = useState("");
+  const [draftSocialHook, setDraftSocialHook] = useState("");
+  const [draftKeyword1, setDraftKeyword1] = useState("");
+  const [draftKeyword2, setDraftKeyword2] = useState("");
+  const [draftKeyword3, setDraftKeyword3] = useState("");
+  const [draftKeywordTag, setDraftKeywordTag] = useState("");
+  const [draftPsyTrigger, setDraftPsyTrigger] = useState("");
+  const [draftStockTag, setDraftStockTag] = useState("");
+  const [savingModal, setSavingModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [generateDropActive, setGenerateDropActive] = useState(false);
   const [generateTopic, setGenerateTopic] = useState("");
   const [generating, setGenerating] = useState(false);
-  const SOURCE_OPTIONS = ["宏觀主題", "熱門話題", "股票分析"] as const;
+  const SOURCE_OPTIONS = ["Macro Themes", "Hot Topics", "Stock Analysis"] as const;
   const [selectedSource, setSelectedSource] = useState<string>(SOURCE_OPTIONS[0]);
+  type StatusFilter = "pending" | "approved" | "rejected";
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+  const [trendView, setTrendView] = useState<"HK" | "Global">("HK");
+  const [trendingData, setTrendingData] = useState<{ date: string; keywords: string } | null>(null);
+  const [trendingLoading, setTrendingLoading] = useState(true);
   const navigate = useNavigate();
 
   const showToast = (msg: string) => {
@@ -35,21 +59,39 @@ export default function CapitalApprovalPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSaveEdit = async (payload: Partial<CapitalKeywordItem>) => {
-    if (!editItem) return;
+  const handleSaveModal = async () => {
+    if (!selectedItem) return;
+    setSavingModal(true);
     try {
-      const res = await authFetch(`/api/capitalkeywords/${editItem.id}`, {
+      const payload = {
+        source: draftSource,
+        title: draftTitle,
+        summary: draftSummary,
+        socialHook: draftSocialHook,
+        keyword1: draftKeyword1,
+        keyword2: draftKeyword2,
+        keyword3: draftKeyword3,
+        keywordTag: draftKeywordTag,
+        psyTrigger: draftPsyTrigger,
+        stockTag: draftStockTag,
+        custom: commentsDraft,
+      };
+      const res = await authFetch(`/api/capitalkeywords/${selectedItem.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Update failed");
       const updated = await res.json();
-      setItems((prev) => prev.map((i) => (i.id === editItem.id ? { ...i, ...updated } : i)));
-      setEditItem(null);
+      const id = selectedItem.id;
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...updated } : i)));
+      setSelectedItem((prev) => (prev && prev.id === id ? { ...prev, ...updated } : prev));
+      showToast("Saved");
     } catch (e) {
       console.error(e);
       alert((e as Error).message || "Failed to save");
+    } finally {
+      setSavingModal(false);
     }
   };
 
@@ -58,7 +100,11 @@ export default function CapitalApprovalPage() {
     if (item.status?.toLowerCase() === "approved") return;
     setApprovingId(item.id);
     try {
-      const res = await authFetch(`/api/capitalkeywords/${item.id}/status-approve`, { method: "PATCH" });
+      const res = await authFetch(`/api/capitalkeywords/${item.id}/status-approve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: item.title, summary: item.summary ?? "" }),
+      });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Approve failed");
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "Approved" } : i)));
       setApprovingId(null);
@@ -86,6 +132,148 @@ export default function CapitalApprovalPage() {
     }
   };
 
+  useEffect(() => {
+    if (!selectedItem) return;
+    setDraftSource(selectedItem.source ?? "");
+    setDraftTitle(selectedItem.title ?? "");
+    setDraftSummary(selectedItem.summary ?? "");
+    setDraftSocialHook(selectedItem.socialHook ?? "");
+    setDraftKeyword1(selectedItem.keyword1 ?? "");
+    setDraftKeyword2(selectedItem.keyword2 ?? "");
+    setDraftKeyword3(selectedItem.keyword3 ?? "");
+    setDraftKeywordTag(selectedItem.keywordTag ?? "");
+    setDraftPsyTrigger(selectedItem.psyTrigger ?? "");
+    setDraftStockTag(selectedItem.stockTag ?? "");
+    setCommentsDraft(selectedItem.custom ?? "");
+  }, [selectedItem]);
+
+  const handleApproveModal = async (item: CapitalKeywordItem) => {
+    setActionLoading("approve");
+    try {
+      const patchRes = await authFetch(`/api/capitalkeywords/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: draftSource,
+          title: draftTitle,
+          summary: draftSummary,
+          socialHook: draftSocialHook,
+          keyword1: draftKeyword1,
+          keyword2: draftKeyword2,
+          keyword3: draftKeyword3,
+          keywordTag: draftKeywordTag,
+          psyTrigger: draftPsyTrigger,
+          stockTag: draftStockTag,
+          custom: commentsDraft,
+        }),
+      });
+      if (!patchRes.ok) throw new Error((await patchRes.json().catch(() => ({}))).error || "Failed to save fields");
+
+      const res = await authFetch(`/api/capitalkeywords/${item.id}/n8n-approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: draftTitle, summary: draftSummary ?? "" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          [err?.error, err?.hint, err?.detail].filter(Boolean).join(" — ") || "Approve failed"
+        );
+      }
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                status: "Approved",
+                source: draftSource,
+                title: draftTitle,
+                summary: draftSummary,
+                socialHook: draftSocialHook,
+                keyword1: draftKeyword1,
+                keyword2: draftKeyword2,
+                keyword3: draftKeyword3,
+                keywordTag: draftKeywordTag,
+                psyTrigger: draftPsyTrigger,
+                stockTag: draftStockTag,
+                custom: commentsDraft,
+              }
+            : i
+        )
+      );
+      setSelectedItem(null);
+      showToast("Item approved");
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message || "Failed to approve");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectModal = async (item: CapitalKeywordItem) => {
+    setActionLoading("reject");
+    try {
+      const patchRes = await authFetch(`/api/capitalkeywords/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: draftSource,
+          title: draftTitle,
+          summary: draftSummary,
+          socialHook: draftSocialHook,
+          keyword1: draftKeyword1,
+          keyword2: draftKeyword2,
+          keyword3: draftKeyword3,
+          keywordTag: draftKeywordTag,
+          psyTrigger: draftPsyTrigger,
+          stockTag: draftStockTag,
+          custom: commentsDraft,
+        }),
+      });
+      if (!patchRes.ok) throw new Error((await patchRes.json().catch(() => ({}))).error || "Failed to save fields");
+
+      const res = await authFetch(`/api/capitalkeywords/${item.id}/status-reject`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: draftTitle, summary: draftSummary ?? "" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error([err?.error, err?.hint, err?.detail].filter(Boolean).join(" — ") || "Reject failed");
+      }
+
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                status: "Rejected",
+                source: draftSource,
+                title: draftTitle,
+                summary: draftSummary,
+                socialHook: draftSocialHook,
+                keyword1: draftKeyword1,
+                keyword2: draftKeyword2,
+                keyword3: draftKeyword3,
+                keywordTag: draftKeywordTag,
+                psyTrigger: draftPsyTrigger,
+                stockTag: draftStockTag,
+                custom: commentsDraft,
+              }
+            : i
+        )
+      );
+      setSelectedItem(null);
+      showToast("Item rejected");
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message || "Failed to reject");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -98,10 +286,11 @@ export default function CapitalApprovalPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || `Generation failed (${res.status})`);
       }
-      const newItem: CapitalKeywordItem = await res.json();
-      setItems((prev) => [newItem, ...prev]);
+      const data = await res.json();
+      const newItems: CapitalKeywordItem[] = Array.isArray(data) ? data : [data];
+      setItems((prev) => [...newItems, ...prev]);
       setGenerateTopic("");
-      showToast("SEO topic generated and saved");
+      showToast(`SEO topic generated and saved (${newItems.length})`);
     } catch (err) {
       console.error(err);
       alert((err as Error).message || "Failed to generate topic");
@@ -146,9 +335,32 @@ export default function CapitalApprovalPage() {
   };
 
   useEffect(() => {
+    const category = trendView === "HK" ? "HK_trend" : "Global_trend";
+    const fetchTrending = async () => {
+      setTrendingLoading(true);
+      try {
+        const res = await authFetch(`/api/trending-topics?category=${encodeURIComponent(category)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTrendingData(data);
+        } else {
+          setTrendingData(null);
+        }
+      } catch {
+        setTrendingData(null);
+      } finally {
+        setTrendingLoading(false);
+      }
+    };
+    fetchTrending();
+  }, [authFetch, trendView]);
+
+  useEffect(() => {
     const fetchItems = async () => {
       setFetchError(null);
       try {
+        // Use the server cache on mount; it is invalidated on every approve/reject/edit
+        // (invalidateCapitalKeywordsListCaches), so navigations stay fresh without re-hitting Airtable.
         const res = await authFetch("/api/capitalkeywords");
         if (res.ok) {
           const data = await res.json();
@@ -168,9 +380,28 @@ export default function CapitalApprovalPage() {
     fetchItems();
   }, [authFetch]);
 
-  const displayNews = items.filter((item) => item.approve != null && String(item.approve).trim() !== "");
+  // Filtering only depends on `items`; memoize so scroll/visibleCount changes don't re-run three full passes.
+  const displayNewsByStatus = useMemo(() => {
+    const statusLower = (s: string | undefined) => (s ?? "").trim().toLowerCase();
+    const approveLower = (s: string | undefined) => (s ?? "").trim().toLowerCase();
+    return {
+      pending: items.filter(
+        (item) =>
+          approveLower(item.approve) === "approved" &&
+          statusLower(item.status) !== "approved" &&
+          statusLower(item.status) !== "rejected"
+      ),
+      approved: items.filter((item) => statusLower(item.status) === "approved"),
+      rejected: items.filter((item) => statusLower(item.status) === "rejected"),
+    };
+  }, [items]);
+  const displayNews = displayNewsByStatus[statusFilter];
   const visibleNews = displayNews.slice(0, visibleCount);
   const hasMore = visibleCount < displayNews.length;
+
+  useEffect(() => {
+    setVisibleCount(LAZY_PAGE_SIZE);
+  }, [statusFilter]);
 
   const loadMore = useCallback(() => {
     setVisibleCount((c) => Math.min(c + LAZY_PAGE_SIZE, displayNews.length));
@@ -189,179 +420,169 @@ export default function CapitalApprovalPage() {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  const sourceNewsPanel = (
-    <div className="card p-6 shrink-0 w-full lg:w-[28rem]">
-      <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <Newspaper className="w-5 h-5 text-primary" /> Source Topics
-      </h2>
-      {selectedNews.length > 0 ? (
-        <ul className="space-y-3">
-          {selectedNews.map((item) => (
-            <li key={item.id} className="flex gap-3 p-2 rounded-lg bg-slate-50/80 border border-slate-300">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-900 line-clamp-2 leading-tight">
-                  {item.title}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => removeSelected(item.id)}
-                  className="text-[10px] text-slate-400 hover:text-red-500 mt-1"
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {selectedNews.length < MAX_SOURCE_ARTICLES ? (
-        <div
-          onDragOver={handleDropZoneDragOver}
-          onDragLeave={handleDropZoneDragLeave}
-          onDrop={handleDropZoneDrop}
-          className={`text-center border-2 border-dashed rounded-xl transition-all mt-3 ${
-            dropZoneActive
-              ? "border-primary bg-primary/5"
-              : "border-slate-300 bg-slate-50/50"
-          } ${
-            selectedNews.length === 0
-              ? "py-8 min-h-[7.5rem]"
-              : selectedNews.length === 1
-                ? "py-4 min-h-[4.5rem]"
-                : "py-3 min-h-[3.5rem]"
-          }`}
-        >
-          <Plus
-            className={`text-slate-300 mx-auto mb-1 ${
-              selectedNews.length === 0 ? "w-8 h-8" : selectedNews.length === 1 ? "w-6 h-6" : "w-5 h-5"
-            }`}
-          />
-          <p className="text-sm text-slate-400 px-4">
-            {selectedNews.length === 0
-              ? "Drag articles here (up to 3) to begin research."
-              : `Drag more (${selectedNews.length}/${MAX_SOURCE_ARTICLES})`}
-          </p>
-        </div>
-      ) : null}
-    </div>
-  );
-
-  const sidebarBottomBar = selectedNews.length > 0 && (
-    <div className="mt-6 pt-4 border-t border-slate-300 space-y-2 w-full lg:w-[28rem]">
-      <button
-        onClick={() => navigate("/research", { state: { newsItem: selectedNews[0], additionalContext } })}
-        className="w-full flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-primary hover:bg-primary/90 py-2.5 px-4 rounded-lg transition-colors"
-      >
-        Research & Write <ChevronRight className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => setSelectedNews([])}
-        className="w-full text-xs text-slate-500 hover:text-primary font-medium"
-      >
-        Clear selection
-      </button>
-    </div>
-  );
-
-  const generationOptionsPanel = (
-    <div className="card p-6 shrink-0 w-full lg:w-[28rem] mt-6">
-      <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <PenTool className="w-5 h-5 text-primary" /> Generation Options
-      </h2>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-            Additional Context
-          </label>
-          <textarea
-            placeholder="e.g. Focus on the impact on tech stocks, or write in a more casual tone..."
-            className="w-full h-32 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
-            value={additionalContext}
-            onChange={(e) => setAdditionalContext(e.target.value)}
-          />
-        </div>
-        <p className="text-xs text-slate-400">
-          This will be carried over when you go to Research & Write.
-        </p>
-      </div>
-    </div>
-  );
-
   return (
     <div className="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col lg:flex-row gap-8">
-        <aside className="lg:sticky lg:top-24 lg:self-start order-2 lg:order-1 flex flex-col">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Pending Approval</h1>
-          <p className="text-sm text-slate-600 mb-6 max-w-[28rem]">
-            Approve topics to allow the system to run in-depth research and generate content. Only approved items will proceed to the next stage.
-          </p>
-          <div className="card p-4 mb-4 w-full lg:w-[28rem]">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" /> Generate a new SEO Topic
-            </h2>
-            <div className="flex gap-2 mb-3">
-              {SOURCE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setSelectedSource(opt)}
-                  className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold text-center transition-colors border ${
-                    selectedSource === opt
-                      ? "bg-primary text-white border-primary"
-                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-400 hover:bg-slate-50"
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-2">
-              <textarea
-                rows={4}
-                placeholder="Enter a topic or leave blank for auto..."
-                value={generateTopic}
-                onChange={(e) => setGenerateTopic(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey && !generating) { e.preventDefault(); handleGenerate(); } }}
-                disabled={generating}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-y min-h-[5rem] disabled:opacity-50"
-              />
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={generating}
-                className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors disabled:opacity-50"
-              >
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {generating ? "Generating..." : "Generate"}
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2">
-              Research & generate a SEO topic
+        <aside className="lg:sticky lg:top-24 lg:self-start order-2 lg:order-1 flex flex-col w-full lg:w-[28rem] lg:min-h-[calc(100vh-5rem)] pb-12">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1 pb-2 shrink-0">Topics</h1>
+          {role !== "admin" && (
+            <p className="text-sm text-slate-600 mb-4">
+              Review and approve the identified themes and topics to initiate our deep-dive research phase. Our specialized financial editorial team will subsequently produce high-authority content tailored for your audience.
             </p>
+          )}
+          <div className="flex flex-col flex-1 min-h-0">
+            {role === "admin" && (
+            <>
+            <div
+              className={`card p-4 w-full flex-[0_0_25%] min-h-0 overflow-auto shrink-0 transition-all duration-200 ${
+                generateDropActive ? "ring-2 ring-primary border-primary bg-primary/5" : ""
+              }`}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setGenerateDropActive(true); }}
+              onDragLeave={() => setGenerateDropActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setGenerateDropActive(false);
+                const keyword = e.dataTransfer.getData("text/plain");
+                if (keyword) {
+                  setGenerateTopic((prev) => prev ? `${prev}, ${keyword}` : keyword);
+                  showToast(`"${keyword}" added to topic`);
+                }
+              }}
+            >
+              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" /> Generate a new SEO Topic
+              </h2>
+              <div className="flex gap-2 mb-3">
+                {SOURCE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setSelectedSource(opt)}
+                    className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold text-center transition-colors border ${
+                      selectedSource === opt
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white text-slate-600 border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <textarea
+                  rows={4}
+                  placeholder="Keywords or theme (long-term SEO topic ideas; leave blank for auto-cluster)…"
+                  value={generateTopic}
+                  onChange={(e) => setGenerateTopic(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey && !generating) { e.preventDefault(); handleGenerate(); } }}
+                  disabled={generating}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-y min-h-[5rem] disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {generating ? "Generating..." : "Generate"}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">
+                Research & generate a SEO topic
+              </p>
+            </div>
+            <div className="card p-4 w-full flex-1 min-h-0 flex flex-col overflow-hidden mt-4">
+              <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" /> Trending Keywords
+                </h2>
+                <div className="flex rounded-lg bg-slate-100 border border-slate-200 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setTrendView("HK")}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      trendView === "HK" ? "bg-red-500 text-white shadow-sm" : "text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    HK
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrendView("Global")}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      trendView === "Global" ? "bg-blue-500 text-white shadow-sm" : "text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Global
+                  </button>
+                </div>
+              </div>
+              {trendingLoading ? (
+                <ContentAreaLoader variant="compact" size="sm" />
+              ) : trendingData?.keywords ? (
+                <>
+                  <div className="relative flex-1 min-h-0 flex flex-col">
+                    <TrendingBubbleChart items={parseTrendingKeywords(trendingData.keywords)} variant={trendView} />
+                    {trendingData.date && (
+                      <p className="absolute bottom-1 right-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                        {formatCreateDate(trendingData.date)}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2 shrink-0 leading-tight">
+                    * Drag a bubble to the "Generate a new SEO Topic" box above to use the keyword to generate a new topic.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500 flex-1 flex items-center">
+                  No trending data for {trendView === "HK" ? "HK" : "Global"}.
+                </p>
+              )}
+            </div>
+            </>
+            )}
           </div>
         </aside>
         <main className="flex-1 min-w-0 order-1 lg:order-2">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-              <p className="text-slate-500 animate-pulse">Fetching latest updates...</p>
-            </div>
+            <ContentAreaLoader variant="main" message="Fetching latest updates..." />
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
               <p className="text-slate-600 font-medium mb-2">Couldn&apos;t load items</p>
               <p className="text-slate-500 text-sm mb-4">{fetchError}</p>
             </div>
-          ) : displayNews.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Newspaper className="w-14 h-14 text-slate-200 mb-4" />
-              <p className="text-slate-600 font-medium mb-1">
-                No items found
-              </p>
-              <p className="text-slate-500 text-sm">
-                Items will appear here once Airtable has data.
-              </p>
-            </div>
           ) : (
+            <>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:justify-start">
+              <div className="flex gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200 w-fit shrink-0">
+                {(["pending", "approved", "rejected"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setStatusFilter(tab)}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                      statusFilter === tab
+                        ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent"
+                    }`}
+                  >
+                    {tab === "pending" ? "Pending Approval" : tab === "approved" ? "Approved" : "Rejected"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {displayNews.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Newspaper className="w-14 h-14 text-slate-200 mb-4" />
+                <p className="text-slate-600 font-medium mb-1">
+                  {statusFilter === "pending" ? "No items pending approval" : statusFilter === "approved" ? "No approved items" : "No rejected items"}
+                </p>
+                <p className="text-slate-500 text-sm">
+                  {statusFilter === "pending" ? "Items awaiting review will appear here." : statusFilter === "approved" ? "Approved items will appear here." : "Rejected items will appear here."}
+                </p>
+              </div>
+            ) : (
             <>
             <div className="grid grid-cols-1 gap-6">
               {visibleNews.map((item, idx) => (
@@ -374,154 +595,84 @@ export default function CapitalApprovalPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.03 }}
-                  onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                  onClick={() => setSelectedItem(item)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedId(expandedId === item.id ? null : item.id); } }}
-                  aria-expanded={expandedId === item.id}
-                  className="card hover:shadow-xl hover:shadow-primary/5 hover:bg-slate-50 transition-all duration-300 cursor-pointer overflow-hidden border border-slate-200 bg-white"
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedItem(item); } }}
+                  className={`card transition-all duration-300 cursor-pointer overflow-hidden border bg-white ${
+                    statusFilter === "pending"
+                      ? "border-slate-200 hover:border-2 hover:border-[#f8b62d] hover:shadow-lg hover:shadow-[#f8b62d]/30 hover:bg-[#f8b62d]/10 hover:ring-2 hover:ring-[#f8b62d]"
+                      : "border-slate-200 hover:border-2 hover:border-[#f8b62d] hover:shadow-xl hover:shadow-[#f8b62d]/20 hover:bg-[#f8b62d]/5 hover:ring-2 hover:ring-[#f8b62d]"
+                  }`}
                 >
-                  <div className="p-6">
+                  <div className="p-4 md:p-6">
                     <div className="flex flex-col gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="shrink-0 w-32 flex flex-col items-center gap-1 min-h-[4.5rem]">
-                          {item.source ? (
-                            <span className="w-full inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary text-white uppercase tracking-wider truncate" title={item.source}>
-                              {item.source}
+                      <div className="flex flex-col md:flex-row items-start gap-4">
+                        <div className="shrink-0 w-full md:w-32 flex flex-row md:flex-col items-center md:items-center justify-between md:justify-start gap-2 md:gap-1 md:min-h-[4.5rem]">
+                          <div className="flex flex-col items-start md:items-center gap-1">
+                            {item.source ? (
+                              <span className={topicSourcePillClass(item.source)} title={item.source}>
+                                {item.source}
+                              </span>
+                            ) : null}
+                            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                              {item.createDate ? formatCreateDate(item.createDate) : "—"}
                             </span>
-                          ) : null}
-                          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider min-h-[1.25rem]">
-                            {item.createDate ? formatCreateDate(item.createDate) : "—"}
-                          </span>
+                          </div>
                           {item.status?.toLowerCase() === "approved" && (
                             <button
                               type="button"
                               onClick={(e) => handleUnapprove(item, e)}
                               disabled={!!unapprovingId}
                               title="Click to clear approval"
-                              className="mt-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200 uppercase tracking-wider hover:bg-green-200 hover:border-green-300 transition-colors disabled:opacity-50 cursor-pointer"
+                              className="md:mt-auto shrink-0 inline-flex items-center gap-1 px-2 py-1 md:py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200 uppercase tracking-wider hover:bg-green-200 hover:border-green-300 transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               {unapprovingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Approved
                             </button>
                           )}
+                          {item.status?.toLowerCase() === "rejected" && (
+                            <span className="md:mt-auto shrink-0 inline-flex items-center gap-1 px-2 py-1 md:py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 uppercase tracking-wider">
+                              <XCircle className="w-3 h-3" /> Rejected
+                            </span>
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-1">
-                            <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                              {item.title}
-                            </h3>
-                            <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">
-                              {item.summary}
-                            </p>
-                          </div>
-                          <div className="shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <div className={`flex-1 min-w-0 flex flex-row items-start gap-3 ${statusFilter !== "pending" ? "justify-between" : ""}`}>
+                            <div className="min-w-0 space-y-1">
+                              <h3 className="text-base md:text-lg font-bold text-slate-900 leading-tight">
+                                {item.title}
+                              </h3>
+                              <p className="text-xs md:text-sm text-slate-600 leading-relaxed line-clamp-2 md:line-clamp-3">
+                                {item.summary}
+                              </p>
+                            </div>
+                          {statusFilter === "approved" && (
+                          <div className="shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              onClick={() => setEditItem(item)}
-                              className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                              title="Custom instructions"
+                              onClick={(e) => handleUnapprove(item, e)}
+                              disabled={!!unapprovingId}
+                              title="Clear approval (remove from Status)"
+                              className="p-2 rounded-lg bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-500 transition-colors disabled:opacity-50"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              {unapprovingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                             </button>
-                            {item.status?.toLowerCase() === "approved" ? (
-                              <span
-                                className="p-2 rounded-lg border border-green-200 bg-green-100 text-green-600"
-                                title="Already approved"
-                              >
-                                <Check className="w-4 h-4" />
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => handleApprove(item, e)}
-                                disabled={!!approvingId}
-                                className="p-2 rounded-lg border border-green-600 bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
-                                title="Approve"
-                              >
-                                {approvingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                              </button>
-                            )}
-                            <span className="p-1 rounded-full text-slate-400 pointer-events-none" aria-hidden>
-                              <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedId === item.id ? "rotate-180" : ""}`} />
-                            </span>
                           </div>
+                          )}
+                          {statusFilter === "rejected" && (
+                          <div className="shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => handleUnapprove(item, e)}
+                              disabled={!!unapprovingId}
+                              title="Clear status (remove from Rejected)"
+                              className="p-2 rounded-lg bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-500 transition-colors disabled:opacity-50"
+                            >
+                              {unapprovingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          )}
                         </div>
                       </div>
-
-                      <AnimatePresence>
-                        {expandedId === item.id && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="overflow-hidden"
-                          >
-                            <div className="pt-6 mt-6 border-t border-slate-100 space-y-6">
-                              {item.socialHook && (
-                                <div className="space-y-2">
-                                  <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <Share2 className="w-3 h-3" /> Social Hook
-                                  </label>
-                                  <p className="text-sm text-slate-700 italic bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    "{item.socialHook}"
-                                  </p>
-                                </div>
-                              )}
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <Hash className="w-3 h-3" /> Keywords
-                                  </label>
-                                  <div className="flex flex-wrap gap-2">
-                                    {[item.keyword1, item.keyword2, item.keyword3].filter(Boolean).map((k, i) => (
-                                      <span key={i} className="px-2 py-1 rounded bg-secondary/50 text-slate-700 text-xs font-medium border border-slate-200">
-                                        {k}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {item.keywordTag && (
-                                  <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                      <Target className="w-3 h-3" /> Keyword Tag
-                                    </label>
-                                    <span className="inline-block px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
-                                      {item.keywordTag}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {item.psyTrigger && (
-                                  <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                      <Zap className="w-3 h-3" /> Psy Trigger
-                                    </label>
-                                    <p className="text-xs text-slate-600 bg-amber-50/50 p-2 rounded border border-amber-100">
-                                      {item.psyTrigger}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {item.stockTag && (
-                                  <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                      <TrendingUp className="w-3 h-3" /> Stock Tag
-                                    </label>
-                                    <span className="inline-block px-2 py-1 rounded bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
-                                      {item.stockTag}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </div>
                   </div>
                 </motion.div>
@@ -530,124 +681,204 @@ export default function CapitalApprovalPage() {
             </div>
             {hasMore && <div ref={loadMoreRef} className="h-10 flex items-center justify-center py-8" aria-hidden />}
             </>
+            )}
+            </>
           )}
         </main>
       </div>
 
-      {editItem && (
-        <EditModal
-          item={editItem}
-          onClose={() => setEditItem(null)}
-          onSave={handleSaveEdit}
-        />
-      )}
-
       <AnimatePresence>
-        {toast && (
+        {selectedItem && (
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-xl bg-green-600 text-white text-sm font-semibold shadow-lg shadow-green-600/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => !savingModal && !actionLoading && setSelectedItem(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Topic details"
           >
-            <Check className="w-4 h-4" />
-            {toast}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 shrink-0 px-6 py-4 border-b border-slate-200 bg-slate-50">
+                <h3 className="text-sm font-semibold text-slate-800 min-w-0 flex-1 whitespace-normal break-words">
+                  {draftTitle || "Untitled"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => !savingModal && !actionLoading && setSelectedItem(null)}
+                  disabled={!!savingModal || !!actionLoading}
+                  className="p-2 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-50"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                  Created {selectedItem.createDate ? formatCreateDate(selectedItem.createDate) : "—"}
+                </p>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Source</label>
+                  <WrappingTextField
+                    value={draftSource}
+                    onChange={(e) => setDraftSource(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Title</label>
+                  <WrappingTextField
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Summary</label>
+                  <WrappingTextField
+                    value={draftSummary}
+                    onChange={(e) => setDraftSummary(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Share2 className="w-3 h-3" /> Social hook
+                  </label>
+                  <WrappingTextField
+                    value={draftSocialHook}
+                    onChange={(e) => setDraftSocialHook(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      <Hash className="w-3 h-3" /> Keyword 1
+                    </label>
+                    <WrappingTextField
+                      value={draftKeyword1}
+                      onChange={(e) => setDraftKeyword1(e.target.value)}
+                      disabled={!!savingModal || !!actionLoading}
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Keyword 2</label>
+                    <WrappingTextField
+                      value={draftKeyword2}
+                      onChange={(e) => setDraftKeyword2(e.target.value)}
+                      disabled={!!savingModal || !!actionLoading}
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Keyword 3</label>
+                    <WrappingTextField
+                      value={draftKeyword3}
+                      onChange={(e) => setDraftKeyword3(e.target.value)}
+                      disabled={!!savingModal || !!actionLoading}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Target className="w-3 h-3" /> Keyword tag
+                  </label>
+                  <WrappingTextField
+                    value={draftKeywordTag}
+                    onChange={(e) => setDraftKeywordTag(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Zap className="w-3 h-3" /> Psy trigger
+                  </label>
+                  <WrappingTextField
+                    value={draftPsyTrigger}
+                    onChange={(e) => setDraftPsyTrigger(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <TrendingUp className="w-3 h-3" /> Stock tag
+                  </label>
+                  <WrappingTextField
+                    value={draftStockTag}
+                    onChange={(e) => setDraftStockTag(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Comments</label>
+                  <WrappingTextField
+                    value={commentsDraft}
+                    onChange={(e) => setCommentsDraft(e.target.value)}
+                    disabled={!!savingModal || !!actionLoading}
+                    placeholder="Add comments (saved with Save or when you Approve / Reject)"
+                    rows={3}
+                    className="bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none min-h-[5rem]"
+                  />
+                </div>
+              </div>
+
+              <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => handleSaveModal()}
+                  disabled={!!savingModal || !!actionLoading}
+                  className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {savingModal ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {savingModal ? "Saving…" : "Save"}
+                </button>
+                <div className="flex flex-wrap justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleRejectModal(selectedItem)}
+                    disabled={!!actionLoading || !!savingModal}
+                    className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading === "reject" ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApproveModal(selectedItem)}
+                    disabled={!!actionLoading || !!savingModal}
+                    className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading === "approve" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Approve
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
 
-function EditModal({
-  item,
-  onClose,
-  onSave,
-}: {
-  item: CapitalKeywordItem;
-  onClose: () => void;
-  onSave: (payload: Partial<CapitalKeywordItem>) => Promise<void>;
-}) {
-  const [title, setTitle] = useState(item.title);
-  const [custom, setCustom] = useState(item.custom ?? "");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setTitle(item.title);
-    setCustom(item.custom ?? "");
-  }, [item]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await onSave({
-        title,
-        summary: item.summary,
-        custom,
-        // Keep hidden fields unchanged (send current item values so they are not cleared)
-        source: item.source,
-        socialHook: item.socialHook,
-        keyword1: item.keyword1,
-        keyword2: item.keyword2,
-        keyword3: item.keyword3,
-        keywordTag: item.keywordTag,
-        psyTrigger: item.psyTrigger,
-        stockTag: item.stockTag,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Edit item"
-    >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between shrink-0 px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Edit item</h2>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form id="edit-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Custom instructions</label>
-            <textarea
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder="Enter custom instructions or notes for this item."
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg resize-y min-h-[5rem]"
-            />
-          </div>
-        </form>
-        <div className="shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="edit-form"
-            disabled={saving}
-            className="px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </div>
-      </div>
+      <Toast message={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

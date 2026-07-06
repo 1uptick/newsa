@@ -5,6 +5,8 @@ import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { inputClass } from "../lib/formClasses";
 import { useDebounce } from "../lib/useDebounce";
+import { ContentAreaLoader } from "../components/ContentAreaLoader";
+import { formatBrokerageTokenCount } from "../lib/brokerageTokens";
 
 type UserRow = {
   firebase_uid: string;
@@ -14,6 +16,8 @@ type UserRow = {
   group_name: string | null;
   created_at: string;
   last_login: string | null;
+  tokens_remaining: number | null;
+  tokens_limit: number | null;
 };
 
 export default function AdminUsersPage() {
@@ -135,9 +139,7 @@ export default function AdminUsersPage() {
           <p className="px-6 py-3 text-red-500 text-sm">{error}</p>
         )}
         {loading ? (
-          <div className="p-12 flex justify-center">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
+          <ContentAreaLoader variant="card" size="sm" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -146,6 +148,7 @@ export default function AdminUsersPage() {
                   <th className="px-6 py-3 font-medium">Email</th>
                   <th className="px-6 py-3 font-medium">Role</th>
                   <th className="px-6 py-3 font-medium">Group</th>
+                  <th className="px-6 py-3 font-medium">Tokens</th>
                   <th className="px-6 py-3 font-medium">Joined</th>
                   <th className="px-6 py-3 font-medium">Last login</th>
                   <th className="px-6 py-3 w-20 text-right">Actions</th>
@@ -165,6 +168,21 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-3 text-sm text-slate-600">{u.group_name ?? "—"}</td>
+                    <td className="px-6 py-3 text-sm text-slate-600 tabular-nums">
+                      {u.tokens_remaining != null && u.tokens_limit != null ? (
+                        <span
+                          title={`${u.tokens_remaining.toLocaleString()} available of ${u.tokens_limit.toLocaleString()} monthly limit (shared by ${u.group_name ?? "group"})`}
+                        >
+                          {formatBrokerageTokenCount(u.tokens_remaining)}
+                          <span className="text-slate-400">
+                            {" "}
+                            / {formatBrokerageTokenCount(u.tokens_limit)}
+                          </span>
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="px-6 py-3 text-sm text-slate-500">
                       {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                     </td>

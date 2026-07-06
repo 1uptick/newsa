@@ -1,55 +1,56 @@
-import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  Link,
-  NavLink,
-  useLocation,
-} from "react-router-dom";
-import { LogOut, Loader2, ChevronDown, Shield, Settings, User, Eye } from "lucide-react";
-import type { User as FirebaseUser } from "firebase/auth";
+import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
+import { AppPageLoader } from "./components/AppPageLoader";
 import {
-  ADMIN_MENU,
-  MENU_GROUP_IDS,
-  getAdminTopLevelGroupLinks,
-  getGroupMenuItems,
   groupNameToId,
+  getDefaultLandingPath,
+  getMenuGroupIdsForAdminViewAs,
+  getEffectiveMenuView,
+  UPTICK_ADMIN_EMAIL,
+  UPTICK_GROUP_ID,
+  ATFX_GROUP_ID,
 } from "./config/menu";
-import { getDefaultAvatarUrl, getDefaultAvatarUrlJpg } from "./lib/getDefaultAvatarUrl";
-import { getDefaultDisplayName } from "./lib/getDefaultDisplayName";
+import { BROKERAGE_ATFX } from "./lib/brokerageTokens";
+import { BrokerageTokenBalanceProvider } from "./contexts/BrokerageTokenBalanceContext";
+import { Navbar, VIEW_AS_STORAGE_KEY } from "./components/AppNavbar";
+import { NavbarSupplementProvider } from "./contexts/NavbarSupplementContext";
 
 // Direct imports for proper code splitting (avoid barrel file)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const CapitalArticlePage = lazy(() => import("./pages/Capital/capitalarticlePages"));
 const CapitalKeywordsPage = lazy(() => import("./pages/Capital/capitalkeywords"));
+const CapitalDashboardPage = lazy(() => import("./pages/Capital/capitalDashboard"));
 const CapitalApprovalPage = lazy(() => import("./pages/Capital/capitalapproval"));
+const AtfxDashboardPage = lazy(() => import("./pages/ATFX/atfxDashboard"));
+const AtfxApprovalPage = lazy(() => import("./pages/ATFX/atfxApproval"));
+const AtfxArticlePage = lazy(() => import("./pages/ATFX/atfxArticlePages"));
+const AtfxResearchReportPage = lazy(() => import("./pages/ATFX/atfxResearchReport"));
+const AtfxMarketsPage = lazy(() => import("./pages/ATFX/atfxMarkets"));
+const OneUptickTopicsPage = lazy(() => import("./pages/OneUptick/1upticktopics"));
+const OneUptickTwittPage = lazy(() => import("./pages/OneUptick/1upticktwitt"));
+const OneUptickArticlesPage = lazy(() => import("./pages/OneUptick/1uptickarticles"));
+const OneUptickSeoPage = lazy(() => import("./pages/OneUptick/1uptickseo"));
+const OneUptickTradingViewPage = lazy(() => import("./pages/OneUptick/1uptickTradingView"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const PasswordResetPage = lazy(() => import("./pages/PasswordResetPage"));
 const AdminPanelPage = lazy(() => import("./pages/AdminPanelPage"));
 const AdminLayout = lazy(() => import("./pages/AdminLayout"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
+const AdminBrokerageTokensPage = lazy(() => import("./pages/AdminBrokerageTokensPage"));
+const SettingsLayout = lazy(() => import("./pages/SettingsLayout"));
 const ClientSettingsPage = lazy(() => import("./pages/ClientSettingsPage"));
+const RemarksPage = lazy(() => import("./pages/RemarksPage"));
 
-const PageFallback = () => (
-  <div className="min-h-[50vh] flex items-center justify-center">
-    <Loader2 className="w-10 h-10 text-primary animate-spin" />
-  </div>
-);
+const PageFallback = () => <AppPageLoader layout="compact" message="" ariaLabel="Loading page" />;
 
 // --- Protected route: require login
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-      </div>
-    );
+    return <AppPageLoader layout="full" message="" ariaLabel="Loading" />;
   }
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -66,15 +67,32 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** 1uptick routes: assigned clients, or admin support@1uptick.com only. */
+function OneUptickRoute({ children }: { children: React.ReactNode }) {
+  const { user, role, groupName } = useAuth();
+  const email = user?.email?.trim().toLowerCase() ?? "";
+  if (role === "admin") {
+    if (email === UPTICK_ADMIN_EMAIL.toLowerCase()) return <>{children}</>;
+    return <Navigate to="/" replace />;
+  }
+  if (role === "client" && groupNameToId(groupName) === UPTICK_GROUP_ID) return <>{children}</>;
+  return <Navigate to="/" replace />;
+}
+
+/** ATFX portal: assigned ATFX clients, or any admin. */
+function AtfxRoute({ children }: { children: React.ReactNode }) {
+  const { role, groupName, loading } = useAuth();
+  if (loading) return <PageFallback />;
+  if (role === "admin") return <>{children}</>;
+  if (role === "client" && groupNameToId(groupName) === ATFX_GROUP_ID) return <>{children}</>;
+  return <Navigate to="/" replace />;
+}
+
 // --- Guest-only (redirect to app if logged in)
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-      </div>
-    );
+    return <AppPageLoader layout="full" message="" ariaLabel="Loading" />;
   }
   if (user) {
     return <Navigate to="/" replace />;
@@ -82,323 +100,16 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const VIEW_AS_STORAGE_KEY = "newsa_admin_view_as";
-
-// --- Navbar ---
-const Navbar = ({
-  user,
-  role,
-  groupName,
-  onLogout,
-  viewAs,
-  setViewAs,
-}: {
-  user: FirebaseUser | null;
-  role: string | null;
-  groupName: string | null;
-  onLogout: () => void;
-  viewAs: string | null;
-  setViewAs: (value: string | null) => void;
-}) => {
+// --- Root route: redirect to first menu item for user's group (e.g. Capital -> Dashboard)
+function RootOrRedirect() {
   const location = useLocation();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [viewAsOpen, setViewAsOpen] = useState(false);
-  const [avatarFallback, setAvatarFallback] = useState(0);
-  const profileRef = useRef<HTMLDivElement>(null);
-  const viewAsRef = useRef<HTMLDivElement>(null);
-  const defaultAvatarPng = getDefaultAvatarUrl(role, groupName);
-  const defaultAvatarJpg = getDefaultAvatarUrlJpg(role, groupName);
-  const hasDefaultAvatar = defaultAvatarPng || defaultAvatarJpg;
-  const showAvatarImg = Boolean(user?.photoURL || (hasDefaultAvatar && avatarFallback < 2));
-  const avatarSrc =
-    user?.photoURL ||
-    (avatarFallback === 0 ? (defaultAvatarPng ?? defaultAvatarJpg) : defaultAvatarJpg ?? defaultAvatarPng);
-
-  // Effective menu view: admin sees full menu unless "view as" a group; clients see their group menu
-  const isAdmin = role === "admin";
-  const effectiveView: "admin" | string =
-    isAdmin && viewAs && viewAs !== "admin" ? viewAs : isAdmin ? "admin" : groupNameToId(groupName) ?? "admin";
-
-  const isAdminMenu = effectiveView === "admin";
-  const groupMenuItems = !isAdminMenu ? getGroupMenuItems(effectiveView) : [];
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      if (profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
-      if (viewAsRef.current && !viewAsRef.current.contains(target)) setViewAsOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    setAvatarFallback(0);
-  }, [user?.photoURL, role, groupName]);
-
-  return (
-    <nav className="sticky top-0 z-50 bg-black border-b border-white/10">
-      <div className="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="flex items-center">
-            <img
-              src="/newsa%20app%20logo.webp"
-              alt="Newsa.io"
-              className="h-10 w-auto object-contain"
-              width={120}
-              height={40}
-            />
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-4 text-sm font-medium">
-              {isAdminMenu ? (
-                <>
-                  {ADMIN_MENU.filter((item): item is { label: string; to: string } => "to" in item).map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.to === "/" ? true : undefined}
-                      className={({ isActive }) =>
-                        `transition-colors ${
-                          isActive ? "text-primary font-semibold" : "text-white hover:text-primary"
-                        }`
-                      }
-                    >
-                      {item.label}
-                    </NavLink>
-                  ))}
-                  {getAdminTopLevelGroupLinks().map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      className={({ isActive }) =>
-                        `transition-colors ${
-                          isActive ? "text-primary font-semibold" : "text-white hover:text-primary"
-                        }`
-                      }
-                    >
-                      {link.label}
-                    </NavLink>
-                  ))}
-                  {ADMIN_MENU.filter(
-                    (item): item is { groupId: string; label: string; children: { label: string; to: string; showAtTopLevel?: boolean }[] } =>
-                      "groupId" in item && "children" in item
-                  ).map((item) => {
-                    const dropdownChildren = item.children.filter((c) => !c.showAtTopLevel);
-                    const groupActive = item.children.some(
-                      (c) =>
-                        location.pathname === c.to ||
-                        (c.to !== "/" && location.pathname.startsWith(c.to + "/"))
-                    );
-                    return (
-                      <div key={item.groupId} className="relative group">
-                        <NavLink
-                          to={dropdownChildren[0]?.to ?? item.children[0]?.to ?? "/"}
-                          className={() =>
-                            `inline-flex items-center gap-1 transition-colors ${
-                              groupActive ? "text-primary font-semibold" : "text-white hover:text-primary"
-                            }`
-                          }
-                        >
-                          {item.label}
-                          <ChevronDown className="w-4 h-4 opacity-80 group-hover:rotate-180 transition-transform" />
-                        </NavLink>
-                        <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-                          <div className="py-2 min-w-[11rem] rounded-lg bg-slate-900 border border-white/10 shadow-xl">
-                            {dropdownChildren.map((child) => (
-                              <NavLink
-                                key={child.to}
-                                to={child.to}
-                                end={child.to === "/capital"}
-                                className={({ isActive }) =>
-                                  `block px-4 py-2.5 text-sm transition-colors ${
-                                    isActive
-                                      ? "text-primary font-semibold bg-white/5"
-                                      : "text-white hover:bg-white/10"
-                                  }`
-                                }
-                              >
-                                {child.label}
-                              </NavLink>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <>
-                  {groupMenuItems.length > 0 ? (
-                    groupMenuItems.map((link) => (
-                      <NavLink
-                        key={link.to}
-                        to={link.to}
-                        end={link.to === "/capital"}
-                        className={({ isActive }) =>
-                          `transition-colors ${
-                            isActive ? "text-primary font-semibold" : "text-white hover:text-primary"
-                          }`
-                        }
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))
-                  ) : (
-                    <NavLink
-                      to="/"
-                      className={({ isActive }) =>
-                        `transition-colors ${
-                          isActive ? "text-primary font-semibold" : "text-white hover:text-primary"
-                        }`
-                      }
-                    >
-                      Dashboard
-                    </NavLink>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="h-6 w-px bg-slate-600 hidden md:block" />
-            {isAdmin && (
-              <div className="relative hidden md:block" ref={viewAsRef}>
-                <button
-                  type="button"
-                  onClick={() => setViewAsOpen((o) => !o)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
-                  aria-expanded={viewAsOpen}
-                  aria-haspopup="true"
-                  aria-label="Switch menu view"
-                >
-                  <Eye className="w-4 h-4 shrink-0" />
-                  <span>
-                    View as: {viewAs === "admin" || !viewAs ? "Admin" : MENU_GROUP_IDS.find((g) => g.id === viewAs)?.label ?? viewAs}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${viewAsOpen ? "rotate-180" : ""}`} />
-                </button>
-                {viewAsOpen && (
-                  <div className="absolute right-0 top-full mt-1 py-2 min-w-[10rem] rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewAs("admin");
-                        setViewAsOpen(false);
-                      }}
-                      className={`block w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                        effectiveView === "admin"
-                          ? "text-primary font-semibold bg-white/5"
-                          : "text-white hover:bg-white/10"
-                      }`}
-                    >
-                      Admin
-                    </button>
-                    {MENU_GROUP_IDS.map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => {
-                          setViewAs(g.id);
-                          setViewAsOpen(false);
-                        }}
-                        className={`block w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                          effectiveView === g.id ? "text-primary font-semibold bg-white/5" : "text-white hover:bg-white/10"
-                        }`}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="relative" ref={profileRef}>
-              <button
-                type="button"
-                onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-2 p-2 pr-2.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-all outline-none focus:ring-2 focus:ring-primary/50"
-                aria-expanded={profileOpen}
-                aria-haspopup="true"
-                aria-label="Profile menu"
-              >
-                <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                  {showAvatarImg && avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      width={36}
-                      height={36}
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      onError={() => setAvatarFallback((f) => (f < 2 ? f + 1 : 2))}
-                    />
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </div>
-                <span className="text-xs font-semibold text-white leading-tight hidden sm:block">
-                  {getDefaultDisplayName(user?.email) || "User"}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-slate-400 transition-transform hidden sm:block ${
-                    profileOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {profileOpen && (
-                <div className="absolute right-0 top-full mt-1 py-2 min-w-[11rem] rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50">
-                  <NavLink
-                    to="/settings"
-                    onClick={() => setProfileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
-                        isActive
-                          ? "text-primary font-semibold bg-white/5"
-                          : "text-white hover:bg-white/10"
-                      }`
-                    }
-                  >
-                    <Settings className="w-4 h-4 shrink-0" />
-                    Settings
-                  </NavLink>
-                  {role === "admin" && (
-                    <NavLink
-                      to="/admin"
-                      onClick={() => setProfileOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
-                          isActive
-                            ? "text-primary font-semibold bg-white/5"
-                            : "text-white hover:bg-white/10"
-                        }`
-                      }
-                    >
-                      <Shield className="w-4 h-4 shrink-0" />
-                      Admin Panel
-                    </NavLink>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      onLogout();
-                    }}
-                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
-                  >
-                    <LogOut className="w-4 h-4 shrink-0" />
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-};
+  const { role, groupName } = useAuth();
+  const defaultPath = getDefaultLandingPath(role, groupName);
+  if (location.pathname === "/" && defaultPath !== "/") {
+    return <Navigate to={defaultPath} replace />;
+  }
+  return <Dashboard />;
+}
 
 // --- Layout with navbar for protected app
 function AppLayout() {
@@ -412,15 +123,127 @@ function AppLayout() {
     if (value != null) localStorage.setItem(VIEW_AS_STORAGE_KEY, value);
     else localStorage.removeItem(VIEW_AS_STORAGE_KEY);
   }, []);
+
+  useEffect(() => {
+    if (role !== "admin" || !viewAs || viewAs === "admin") return;
+    const allowed = getMenuGroupIdsForAdminViewAs(user?.email).some((g) => g.id === viewAs);
+    if (!allowed) setViewAs("admin");
+  }, [role, viewAs, user?.email, setViewAs]);
+
+  const effectiveView = getEffectiveMenuView(role, groupName, viewAs);
+  const brokerageTokenId = effectiveView === ATFX_GROUP_ID ? BROKERAGE_ATFX : null;
+
   return (
-    <>
-      <Navbar user={user} role={role} groupName={groupName} onLogout={logout} viewAs={viewAs} setViewAs={setViewAs} />
-      <Routes>
-        <Route path="/" element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
+    <NavbarSupplementProvider>
+      <BrokerageTokenBalanceProvider brokerageId={brokerageTokenId}>
+        <Navbar user={user} role={role} groupName={groupName} onLogout={logout} viewAs={viewAs} setViewAs={setViewAs} />
+        <Routes>
+        <Route path="/" element={<Suspense fallback={<PageFallback />}><RootOrRedirect /></Suspense>} />
         <Route path="/news" element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
         <Route path="/capital" element={<Suspense fallback={<PageFallback />}><CapitalArticlePage /></Suspense>} />
+        <Route path="/capital/dashboard" element={<Suspense fallback={<PageFallback />}><CapitalDashboardPage /></Suspense>} />
         <Route path="/capital/keywords" element={<Suspense fallback={<PageFallback />}><CapitalKeywordsPage /></Suspense>} />
         <Route path="/capital/approval" element={<Suspense fallback={<PageFallback />}><CapitalApprovalPage /></Suspense>} />
+        <Route
+          path="/atfx/markets"
+          element={
+            <AtfxRoute>
+              <Suspense fallback={<PageFallback />}>
+                <AtfxMarketsPage />
+              </Suspense>
+            </AtfxRoute>
+          }
+        />
+        <Route
+          path="/atfx/dashboard"
+          element={
+            <AtfxRoute>
+              <Suspense fallback={<PageFallback />}>
+                <AtfxDashboardPage />
+              </Suspense>
+            </AtfxRoute>
+          }
+        />
+        <Route
+          path="/atfx/approval"
+          element={
+            <AtfxRoute>
+              <Suspense fallback={<PageFallback />}>
+                <AtfxApprovalPage />
+              </Suspense>
+            </AtfxRoute>
+          }
+        />
+        <Route
+          path="/atfx/research-report"
+          element={
+            <AtfxRoute>
+              <Suspense fallback={<PageFallback />}>
+                <AtfxResearchReportPage />
+              </Suspense>
+            </AtfxRoute>
+          }
+        />
+        <Route
+          path="/atfx"
+          element={
+            <AtfxRoute>
+              <Suspense fallback={<PageFallback />}>
+                <AtfxArticlePage />
+              </Suspense>
+            </AtfxRoute>
+          }
+        />
+        <Route
+          path="/1uptick/topics"
+          element={
+            <OneUptickRoute>
+              <Suspense fallback={<PageFallback />}>
+                <OneUptickTopicsPage />
+              </Suspense>
+            </OneUptickRoute>
+          }
+        />
+        <Route
+          path="/1uptick/twitt"
+          element={
+            <OneUptickRoute>
+              <Suspense fallback={<PageFallback />}>
+                <OneUptickTwittPage />
+              </Suspense>
+            </OneUptickRoute>
+          }
+        />
+        <Route
+          path="/1uptick/articles"
+          element={
+            <OneUptickRoute>
+              <Suspense fallback={<PageFallback />}>
+                <OneUptickArticlesPage />
+              </Suspense>
+            </OneUptickRoute>
+          }
+        />
+        <Route
+          path="/1uptick/seo"
+          element={
+            <OneUptickRoute>
+              <Suspense fallback={<PageFallback />}>
+                <OneUptickSeoPage />
+              </Suspense>
+            </OneUptickRoute>
+          }
+        />
+        <Route
+          path="/1uptick/trading-view"
+          element={
+            <AdminRoute>
+              <Suspense fallback={<PageFallback />}>
+                <OneUptickTradingViewPage />
+              </Suspense>
+            </AdminRoute>
+          }
+        />
         <Route
           path="/admin"
           element={
@@ -431,8 +254,12 @@ function AppLayout() {
         >
           <Route index element={<Suspense fallback={<PageFallback />}><AdminPanelPage /></Suspense>} />
           <Route path="users" element={<Suspense fallback={<PageFallback />}><AdminUsersPage /></Suspense>} />
+          <Route path="brokerage-tokens" element={<Suspense fallback={<PageFallback />}><AdminBrokerageTokensPage /></Suspense>} />
         </Route>
-        <Route path="/settings" element={<Suspense fallback={<PageFallback />}><ClientSettingsPage /></Suspense>} />
+        <Route path="/settings" element={<Suspense fallback={<PageFallback />}><SettingsLayout /></Suspense>}>
+          <Route index element={<Suspense fallback={<PageFallback />}><ClientSettingsPage /></Suspense>} />
+          <Route path="remarks" element={<Suspense fallback={<PageFallback />}><RemarksPage /></Suspense>} />
+        </Route>
         <Route
           path="*"
           element={
@@ -445,7 +272,8 @@ function AppLayout() {
           }
         />
       </Routes>
-    </>
+      </BrokerageTokenBalanceProvider>
+    </NavbarSupplementProvider>
   );
 }
 
@@ -453,44 +281,42 @@ function AppLayout() {
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <div className="min-h-screen bg-[var(--color-page-bg)] selection:bg-primary/20">
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                <GuestRoute>
-                  <Suspense fallback={<PageFallback />}><LoginPage /></Suspense>
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <GuestRoute>
-                  <Suspense fallback={<PageFallback />}><RegisterPage /></Suspense>
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/reset-password"
-              element={
-                <GuestRoute>
-                  <Suspense fallback={<PageFallback />}><PasswordResetPage /></Suspense>
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="*"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </AuthProvider>
+      <div className="min-h-screen bg-[var(--color-page-bg)] selection:bg-primary/20">
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <Suspense fallback={<PageFallback />}><LoginPage /></Suspense>
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <Suspense fallback={<PageFallback />}><RegisterPage /></Suspense>
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <GuestRoute>
+                <Suspense fallback={<PageFallback />}><PasswordResetPage /></Suspense>
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </div>
     </Router>
   );
 }

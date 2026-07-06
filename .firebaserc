@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "newsa-ea4dc"
+    "default": "newsa-ea4dc",
+    "newsa": "newsa-ea4dc"
   }
 }

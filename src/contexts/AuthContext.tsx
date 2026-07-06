@@ -16,7 +16,6 @@ type AuthState = {
   groupId: number | null;
   groupName: string | null;
   loading: boolean;
-  refreshKey: number;
   getIdToken: () => Promise<string | null>;
   /** Fetch with auth token. Use { forceRefresh: true } to bypass cache. */
   authFetch: (url: string, init?: FetchOptions) => Promise<Response>;
@@ -34,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [groupId, setGroupId] = useState<number | null>(null);
   const [groupName, setGroupName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
   const authFetchVersion = useRef(0);
 
   const getIdToken = useCallback(async (): Promise<string | null> => {
@@ -55,8 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (init?.forceRefresh) {
         headers.set("Cache-Control", "no-cache");
       }
+      // When body is FormData, do not set Content-Type so the browser sets multipart/form-data with boundary
+      if (init?.body instanceof FormData) {
+        headers.delete("Content-Type");
+      }
       const { forceRefresh: _, ...fetchInit } = init ?? {};
-      return fetch(apiUrl(url), { ...fetchInit, headers });
+      return fetch(apiUrl(url), {
+        ...fetchInit,
+        headers,
+        ...(init?.forceRefresh ? { cache: "no-store" as RequestCache } : {}),
+      });
     },
     [getIdToken]
   );
@@ -71,7 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(() => {
     setUser(auth.currentUser ?? null);
-    setRefreshKey((k) => k + 1);
   }, []);
 
   const refreshAuth = useCallback(async () => {
@@ -88,7 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(data.role ?? null);
         setGroupId(data.groupId ?? null);
         setGroupName(data.groupName ?? null);
-        setRefreshKey((k) => k + 1);
       }
     } catch {
       // ignore
@@ -148,14 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       groupId,
       groupName,
       loading,
-      refreshKey,
       getIdToken,
       authFetch,
       logout,
       refreshUser,
       refreshAuth,
     }),
-    [user, role, groupId, groupName, loading, refreshKey, getIdToken, authFetch, logout, refreshUser, refreshAuth]
+    [user, role, groupId, groupName, loading, getIdToken, authFetch, logout, refreshUser, refreshAuth]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

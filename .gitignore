@@ -1,3 +1,6 @@
+# Server-side ATFX article checkpoints (after LLM, before Airtable)
+.cache/
+
 node_modules/
 build/
 dist/
@@ -6,4 +9,11 @@ coverage/
 *.log
 .env*
 !.env.example
+# Firebase Admin service account JSON (never commit)
+*firebase-adminsdk*.json
+*-fbsvc-*.json
 newsa.db
+functions/lib
+functions/node_modules
+functions/.env
+functions/.env.*

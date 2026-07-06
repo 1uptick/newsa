@@ -22,7 +22,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: OPENROUTER_API_KEY
+      - key: REQUESTY_API_KEY
         sync: false
       - key: SMTP_HOST
         sync: false

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, UserPlus, Copy, Check, Users, Mail, Plus, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Copy, Check, Users, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
+import { UPTICK_GROUP_ID } from "../config/menu";
 import { inputClass, labelClass } from "../lib/formClasses";
+import { ContentAreaLoader } from "../components/ContentAreaLoader";
 
 type Group = { id: number; name: string; created_at: string };
 
@@ -33,9 +35,6 @@ export default function AdminPanelPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [testEmailTo, setTestEmailTo] = useState("");
-  const [sendingTest, setSendingTest] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadInvitations = async () => {
@@ -69,6 +68,12 @@ export default function AdminPanelPage() {
     loadGroups();
   }, []);
 
+  /** Hidden from invite UI for now (managed separately). */
+  const groupsForInvite = useMemo(
+    () => groups.filter((g) => g.name.toLowerCase().trim() !== UPTICK_GROUP_ID),
+    [groups]
+  );
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4000);
@@ -77,8 +82,8 @@ export default function AdminPanelPage() {
 
   const createInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    const groupId = typeof newGroupId === "number" ? newGroupId : null;
-    if (groupId == null) {
+    const groupId = newRole === "admin" ? null : (typeof newGroupId === "number" ? newGroupId : null);
+    if (newRole !== "admin" && groupId == null) {
       setError("Please select a user group.");
       return;
     }
@@ -176,30 +181,6 @@ export default function AdminPanelPage() {
     }
   };
 
-  const sendTestEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testEmailTo.trim()) return;
-    setSendingTest(true);
-    setTestResult(null);
-    try {
-      const res = await authFetch("/api/admin/send-test-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: testEmailTo.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTestResult({ ok: true, message: data.message || "Test email sent." });
-      } else {
-        setTestResult({ ok: false, message: data.error || "Failed to send" });
-      }
-    } catch (e: any) {
-      setTestResult({ ok: false, message: e?.message || "Request failed" });
-    } finally {
-      setSendingTest(false);
-    }
-  };
-
   return (
     <div>
       <motion.section
@@ -217,42 +198,51 @@ export default function AdminPanelPage() {
               <label className={labelClass}>Role</label>
               <select
                 value={newRole}
-                onChange={(e) => setNewRole(e.target.value as "admin" | "client")}
+                onChange={(e) => {
+                  const v = e.target.value as "admin" | "client";
+                  setNewRole(v);
+                  if (v === "admin") {
+                    setNewGroupId("");
+                    setShowAddGroup(false);
+                  }
+                }}
                 className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               >
                 <option value="client">Client</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <div className="min-w-[180px]">
-              <label className={labelClass}>User group</label>
-              <select
-                value={newGroupId === "add" ? "add" : newGroupId === "" ? "" : String(newGroupId)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "add") {
-                    setNewGroupId("add");
-                    setShowAddGroup(true);
-                  } else if (v === "") {
-                    setNewGroupId("");
-                    setShowAddGroup(false);
-                  } else {
-                    setNewGroupId(Number(v));
-                    setShowAddGroup(false);
-                  }
-                }}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none w-full"
-                required
-              >
-                <option value="">Select group</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-                <option value="add">+ Add new group</option>
-              </select>
-            </div>
+            {newRole !== "admin" && (
+              <div className="min-w-[180px]">
+                <label className={labelClass}>User group</label>
+                <select
+                  value={newGroupId === "add" ? "add" : newGroupId === "" ? "" : String(newGroupId)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "add") {
+                      setNewGroupId("add");
+                      setShowAddGroup(true);
+                    } else if (v === "") {
+                      setNewGroupId("");
+                      setShowAddGroup(false);
+                    } else {
+                      setNewGroupId(Number(v));
+                      setShowAddGroup(false);
+                    }
+                  }}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none w-full"
+                  required
+                >
+                  <option value="">Select group</option>
+                  {groupsForInvite.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                  <option value="add">+ Add new group</option>
+                </select>
+              </div>
+            )}
             <div className="flex-1 min-w-[200px]">
               <label className={labelClass}>Email</label>
               <input type="email" placeholder="invitee@example.com" className={inputClass} value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
@@ -306,32 +296,6 @@ export default function AdminPanelPage() {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.03 }}
-        className="card p-6 mb-8"
-      >
-        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-          <Mail className="w-5 h-5" />
-          Send test email
-        </h2>
-        <form onSubmit={sendTestEmail} className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className={labelClass}>To</label>
-            <input type="email" required placeholder="your@email.com" className={inputClass} value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} />
-          </div>
-          <button type="submit" disabled={sendingTest} className="btn-primary flex items-center gap-2">
-            {sendingTest ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send test email"}
-          </button>
-        </form>
-        {testResult && (
-          <p className={`mt-3 text-sm font-medium ${testResult.ok ? "text-green-600" : "text-red-500"}`}>
-            {testResult.ok ? testResult.message : testResult.message}
-          </p>
-        )}
-      </motion.section>
-
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
         className="card overflow-hidden"
       >
@@ -340,9 +304,7 @@ export default function AdminPanelPage() {
           <h2 className="text-lg font-semibold text-slate-800">Invitations</h2>
         </div>
         {loading ? (
-          <div className="p-12 flex justify-center">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
+          <ContentAreaLoader variant="card" size="sm" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

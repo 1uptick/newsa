@@ -133,28 +133,21 @@ export default function ClientSettingsPage() {
   };
 
   return (
-    <div className="max-w-[1250px] mx-auto p-6">
-      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8 md:gap-12 items-start">
-        {/* Left column: Account settings header */}
-        <div className="md:sticky md:top-6">
-          <h1 className="text-2xl font-bold text-slate-900">Account settings</h1>
-        </div>
-
-        {/* Right column: Profile and Change password */}
-        <div>
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card p-6 mb-6"
-          >
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Profile
-            </h2>
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-8 items-start">
-                {/* Left: profile pic + change button, centered */}
-                <div className="flex flex-col items-center justify-center gap-3">
+    <>
+      <motion.section
+        id="profile"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card p-6 mb-6 rounded-xl"
+      >
+        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Mail className="w-5 h-5" />
+          Profile
+        </h2>
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-8 items-start">
+            {/* Left: profile pic + change button, centered */}
+            <div className="flex flex-col items-center justify-center gap-3">
                   <div className="relative">
                     <div className="w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-slate-600 font-semibold text-2xl border-2 border-slate-200">
                       {profilePhotoPreview ? (
@@ -193,88 +186,87 @@ export default function ClientSettingsPage() {
                       </label>
                     )}
                   </div>
-                  {storage && (
-                    <span className="text-xs text-slate-500">Change photo</span>
-                  )}
-                </div>
-                {/* Right: name and email */}
-                <div className="min-w-0 space-y-4">
-                  <div>
-                    <label className={labelClass}>Name</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Your name"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Email</label>
-                    <p className="text-sm font-medium text-slate-900 mt-1">{user?.email ?? "—"}</p>
-                  </div>
-                  {profilePhotoFile && (
-                    <p className="text-sm text-slate-600">
-                      New photo selected. Click &quot;Update profile&quot; to save.
-                    </p>
-                  )}
-                </div>
-              </div>
-              {profileError && <p className="text-red-500 text-sm">{profileError}</p>}
-              {profileSuccess && <p className="text-green-600 text-sm">Profile updated successfully.</p>}
-              <div className="flex justify-end">
-                <button type="submit" disabled={profileLoading} className="btn-primary flex items-center gap-2">
-                  {profileLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <User className="w-5 h-5" />}
-                  Update profile
-                </button>
-              </div>
-            </form>
-          </motion.section>
-
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="card p-6"
-          >
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Key className="w-5 h-5" />
-              Change password
-            </h2>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label className={labelClass}>Current password</label>
-                <input
-                  type="password"
-                  required
-                  className={inputClass}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>New password</label>
-                <input type="password" required minLength={6} className={inputClass} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-              </div>
-              <div>
-                <label className={labelClass}>Confirm new password</label>
-                <input type="password" required minLength={6} className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-              </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              {success && <p className="text-green-600 text-sm">Password updated successfully.</p>}
-              <div className="flex justify-end">
-                <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update password"}
-                </button>
-              </div>
-            </form>
-          </motion.section>
-
-          <p className="mt-6 text-sm text-slate-500">
-            <Link to="/" className="text-primary hover:underline">Back to Dashboard</Link>
-          </p>
+            {storage && (
+              <span className="text-xs text-slate-500">Change photo</span>
+            )}
+          </div>
+          {/* Right: name and email */}
+          <div className="min-w-0 space-y-4">
+            <div>
+              <label className={labelClass}>Name</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Email</label>
+              <p className="text-sm font-medium text-slate-900 mt-1">{user?.email ?? "—"}</p>
+            </div>
+            {profilePhotoFile && (
+              <p className="text-sm text-slate-600">
+                New photo selected. Click &quot;Update profile&quot; to save.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+        {profileError && <p className="text-red-500 text-sm">{profileError}</p>}
+        {profileSuccess && <p className="text-green-600 text-sm">Profile updated successfully.</p>}
+        <div className="flex justify-end">
+          <button type="submit" disabled={profileLoading} className="btn-primary flex items-center gap-2">
+            {profileLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <User className="w-5 h-5" />}
+            Update profile
+          </button>
+        </div>
+        </form>
+      </motion.section>
+
+      <motion.section
+        id="change-password"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="card p-6 mb-6 rounded-xl"
+      >
+        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Key className="w-5 h-5" />
+          Change password
+        </h2>
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label className={labelClass}>Current password</label>
+            <input
+              type="password"
+              required
+              className={inputClass}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>New password</label>
+            <input type="password" required minLength={6} className={inputClass} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass}>Confirm new password</label>
+            <input type="password" required minLength={6} className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {success && <p className="text-green-600 text-sm">Password updated successfully.</p>}
+          <div className="flex justify-end">
+            <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update password"}
+            </button>
+          </div>
+        </form>
+      </motion.section>
+
+      <p className="mt-6 text-sm text-slate-500">
+        <Link to="/" className="text-primary hover:underline">Back to Dashboard</Link>
+      </p>
+    </>
   );
 }

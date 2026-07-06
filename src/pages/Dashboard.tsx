@@ -1,46 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Newspaper, PenTool, ChevronRight, Loader2, Plus, X, RefreshCw } from "lucide-react";
+import { Newspaper, PenTool, ChevronRight, Loader2, Plus, X, RefreshCw, MessageSquare } from "lucide-react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { useDebounce } from "../lib/useDebounce";
 import type { NewsItem } from "../types";
+import { isHostBlockingIframe } from "../lib/iframeBlockingHosts";
+import { ContentAreaLoader } from "../components/ContentAreaLoader";
 
 const LAZY_PAGE_SIZE = 12;
-
-// Hosts that block embedding in iframes (X-Frame-Options / CSP). Show "Open in new tab" instead.
-const IFRAME_BLOCKING_HOSTS = [
-  "yahoo.com",
-  "cnbc.com",
-  "reuters.com",
-  "bloomberg.com",
-  "wsj.com",
-  "ft.com",
-  "economist.com",
-  "bbc.com",
-  "bbc.co.uk",
-  "theguardian.com",
-  "nytimes.com",
-  "washingtonpost.com",
-  "cnn.com",
-  "npr.org",
-  "axios.com",
-  "politico.com",
-  "marketwatch.com",
-  "barrons.com",
-  "seekingalpha.com",
-  "investing.com",
-  "businessinsider.com",
-];
-
-function isHostBlockingIframe(url: string): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return IFRAME_BLOCKING_HOSTS.some((blocked) => host === blocked || host.endsWith("." + blocked));
-  } catch {
-    return false;
-  }
-}
 
 export default function Dashboard() {
   const { authFetch } = useAuth();
@@ -158,15 +126,25 @@ export default function Dashboard() {
     fetchSources();
   }, [authFetch]);
 
-  const sources = sourcesList.length > 0 ? sourcesList : Array.from(new Set((news || []).map((n) => n.source).filter(Boolean))).sort();
+  const sources = useMemo(
+    () =>
+      sourcesList.length > 0
+        ? sourcesList
+        : Array.from(new Set((news || []).map((n) => n.source).filter(Boolean))).sort(),
+    [sourcesList, news]
+  );
   const debouncedSearch = useDebounce(searchKeywords, 300);
   const searchLower = debouncedSearch.trim().toLowerCase();
-  const filteredNews = (news || []).filter((item) => {
-    const matchSearch = !searchLower || (item.title && item.title.toLowerCase().includes(searchLower)) || (item.summary && item.summary.toLowerCase().includes(searchLower));
-    const matchCategory = filterCategories.size === 0 || (item.category && filterCategories.has(item.category));
-    const matchSource = filterSources.size === 0 || (item.source && filterSources.has(item.source));
-    return matchSearch && matchCategory && matchSource;
-  });
+  const filteredNews = useMemo(
+    () =>
+      (news || []).filter((item) => {
+        const matchSearch = !searchLower || (item.title && item.title.toLowerCase().includes(searchLower)) || (item.summary && item.summary.toLowerCase().includes(searchLower));
+        const matchCategory = filterCategories.size === 0 || (item.category && filterCategories.has(item.category));
+        const matchSource = filterSources.size === 0 || (item.source && filterSources.has(item.source));
+        return matchSearch && matchCategory && matchSource;
+      }),
+    [news, searchLower, filterCategories, filterSources]
+  );
   const displayNews = filteredNews;
   const visibleNews = displayNews.slice(0, visibleCount);
   const hasMore = visibleCount < displayNews.length;
@@ -298,15 +276,15 @@ export default function Dashboard() {
           <header className="mb-6">
             <div className="space-y-4 p-4 rounded-xl bg-slate-50 border border-slate-300">
               <div className="flex items-center justify-between gap-4 mb-2">
-                <span className="text-sm font-medium text-slate-600">Filters</span>
+                <span className="text-xs font-medium text-slate-600">Filters</span>
                 <button
                   type="button"
                   onClick={() => fetchNews(true)}
                   disabled={refreshing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-primary bg-white border border-slate-300 rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-primary bg-white border border-slate-300 rounded-lg transition-colors disabled:opacity-50"
                   title="Refresh news (bypass cache)"
                 >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
                   {refreshing ? "Refreshing..." : "Refresh"}
                 </button>
               </div>
@@ -316,7 +294,7 @@ export default function Dashboard() {
                     key={cat}
                     type="button"
                     onClick={() => toggleCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                       filterCategories.has(cat)
                         ? "bg-secondary text-slate-800 border border-slate-300"
                         : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -332,7 +310,7 @@ export default function Dashboard() {
                     key={src}
                     type="button"
                     onClick={() => toggleSource(src)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                       filterSources.has(src)
                         ? "bg-secondary text-slate-800 border border-slate-300"
                         : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -347,16 +325,13 @@ export default function Dashboard() {
                 placeholder="Search by keywords"
                 value={searchKeywords}
                 onChange={(e) => setSearchKeywords(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               />
             </div>
           </header>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-              <p className="text-slate-500 animate-pulse">Fetching latest updates...</p>
-            </div>
+            <ContentAreaLoader variant="main" message="Fetching latest updates..." />
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
               <p className="text-slate-600 font-medium mb-2">Couldn’t load news</p>
@@ -377,6 +352,13 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
+            <section className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                Scheduled for publication
+              </h2>
+              <p className="text-sm text-slate-500 mb-4">Articles approved and ready to publish.</p>
+            </section>
             <div className="grid grid-cols-1 gap-4">
               {visibleNews.map((item, idx) => (
                 <div
@@ -391,15 +373,15 @@ export default function Dashboard() {
                   className="card group hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-grab active:cursor-grabbing"
                 >
                   <div className="px-5 py-4 flex items-center gap-4">
-                    <div className="w-[150px] h-20 shrink-0 rounded overflow-hidden bg-white flex items-center justify-center">
+                    <div className="w-20 h-12 shrink-0 rounded overflow-hidden bg-white flex items-center justify-center">
                       <img
                         src={item.thumbnail || `https://picsum.photos/seed/${item.id}/300/160`}
                         alt=""
                         className="w-full h-full object-contain"
                         loading="lazy"
                         decoding="async"
-                        width={150}
-                        height={80}
+                        width={80}
+                        height={48}
                         referrerPolicy="no-referrer"
                       />
                     </div>

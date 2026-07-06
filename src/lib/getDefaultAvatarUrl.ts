@@ -1,8 +1,11 @@
 /**
- * Default profile images are in public/profile/ (WebP format).
+ * Default profile images are in public/profile/.
  * - Admin: use "newsa logo" (newsa logo.webp)
- * - Other groups: use image file with same name as group (e.g. capital → profile/capital.webp)
+ * - ATFX group: profile/atfx.jpg
+ * - Other groups: profile/{slug}.webp (slug from group name, e.g. capital → capital.webp)
  */
+import { ATFX_GROUP_ID, groupNameToId } from "../config/menu";
+
 function getGroupSlug(groupName: string | null): string | null {
   if (!groupName || !groupName.trim()) return null;
   const slug = groupName
@@ -19,6 +22,9 @@ export function getDefaultAvatarUrl(
 ): string | null {
   if (role === "admin") {
     return "/profile/newsa%20logo.webp";
+  }
+  if (groupNameToId(groupName) === ATFX_GROUP_ID) {
+    return "/profile/atfx.jpg";
   }
   const slug = getGroupSlug(groupName);
   if (slug) return `/profile/${slug}.webp`;

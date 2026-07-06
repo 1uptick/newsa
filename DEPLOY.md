@@ -1,61 +1,58 @@
-# Deploying Newsa (Option B: Supabase + Cloud Run)
+# Deploying Newsa (Firebase Hosting + Cloud Functions)
 
-The app now uses **Supabase** for all backend data (user roles, invitations, groups, password reset tokens). SQLite has been removed.
+The app uses **Supabase** for backend data and **Firebase Cloud Functions** for the API. No Render or gcloud needed.
 
 ## 1. Run the Supabase schema
 
-In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run the contents of `supabase/schema.sql`. This creates:
+In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run the contents of `supabase/schema.sql`.
 
-- `groups`
-- `user_roles`
-- `invitations`
-- `password_reset_tokens`
-- (and keeps existing `capital_articles`)
+If the database already had `capital_articles` before portal content editing was added, also run `supabase/alter_capital_articles_portal_content.sql` once so inline images are not wiped by Airtable sync.
 
-## 2. Set environment variables
+## 2. Set Firebase Functions environment variables
 
-Ensure these are set where the server runs (local `.env`, Cloud Run, or Render):
+**Firebase project must be on the Blaze (pay-as-you-go) plan** for Cloud Functions.
 
-- **Required for auth/data:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-- **Required for Firebase Auth:** `FIREBASE_SERVICE_ACCOUNT` (full JSON string) or path to key file
-- **Required for email:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `APP_BASE_URL`
-- Plus Airtable, OpenRouter, and VITE_* as in `.env.example`
+In [Firebase Console](https://console.firebase.google.com) → **Functions** → select the `api` function → **Configuration** → **Environment variables**, add:
 
-## 3. Deploy the API (choose one)
+| Variable | Value |
+|----------|-------|
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key |
+| `FIREBASE_SERVICE_ACCOUNT` | Full JSON content of your Firebase Admin key file |
+| `SMTP_HOST` | `smtp.hostinger.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_SECURE` | `true` |
+| `SMTP_USER` | `admin@newsa.io` |
+| `SMTP_PASS` | Your SMTP password |
+| `SMTP_FROM` | `Newsa <admin@newsa.io>` |
+| `APP_BASE_URL` | `https://portal.newsa.io` (or your domain) |
+| `AIRTABLE_API_KEY` | Your Airtable key |
+| `AIRTABLE_BASE_ID` | Your Airtable base ID |
+| `AIRTABLE_TABLE_ID` | Your Airtable table ID |
+| `AIRTABLE_CAPITAL_TABLE_ID` | Your Capital table ID |
+| `REQUESTY_API_KEY` | Requesty AI key for LLM routes (SEO topics, ATFX articles, Twitt). |
+| `N8N_APPROVE_WEBHOOK_USER` | Basic Auth user for the n8n **Webhook** node (same as local `.env` if the node has “Authentication” enabled) |
+| `N8N_APPROVE_WEBHOOK_PASSWORD` | Basic Auth password for that webhook |
 
-### A. Google Cloud Run (works with Firebase Hosting)
+`N8N_APPROVE_WEBHOOK_URL` is optional in code (a default URL is used). If your workflow uses Basic Auth — you will see **401 Authorization is required** from n8n until `USER` and `PASSWORD` are set here.
 
-1. Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and run `gcloud auth login` and `gcloud config set project newsa-ea4dc`.
-2. Build and deploy:
-   ```bash
-   gcloud run deploy newsa-api --source . --region us-central1 --allow-unauthenticated --set-env-vars "NODE_ENV=production"
-   ```
-   Add all env vars in the Cloud Run console (Variables & Secrets) or via `--set-env-vars "KEY=value"`.
-3. Note the Cloud Run URL (e.g. `https://newsa-api-xxxxx-uc.a.run.app`).
+## 3. Deploy
 
-### B. Render
+```bash
+npm run build
+firebase deploy
+```
 
-1. Connect the GitHub repo at [render.com](https://render.com).
-2. New **Web Service** → Build: `npm install && npm run build`, Start: `npm start`.
-3. Add all environment variables in the Render dashboard.
-4. Set `APP_BASE_URL` to your Render URL (e.g. `https://newsa-api.onrender.com`).
+This deploys:
+- **Hosting** (frontend from `dist/`)
+- **Functions** (`api` — handles `/api/*`)
 
-## 4. Point the frontend at the API
+Hosting rewrites `/api/**` to the Cloud Function, so the frontend and API are served from the same origin (e.g. `https://portal.newsa.io`). No `VITE_API_BASE_URL` needed.
 
-- If you use **Firebase Hosting** for the frontend only, set `VITE_API_BASE_URL` to your API URL (Cloud Run or Render) and rebuild:
-  ```bash
-  VITE_API_BASE_URL=https://your-api-url.run.app npm run build
-  firebase deploy
-  ```
-- Or add Hosting rewrites so `/api` is proxied to Cloud Run (see [Firebase docs](https://firebase.google.com/docs/hosting/cloud-run)).
+## 4. Custom domain
 
-## 5. Custom domain
-
-Point `portal.newsa.io` (or your domain) to either:
-
-- The Cloud Run / Render URL (if the app serves both SPA and API), or  
-- Firebase Hosting (SPA) and set `VITE_API_BASE_URL` to the API URL.
+In Firebase Console → **Hosting** → **Add custom domain**, add `portal.newsa.io` and update DNS as instructed.
 
 ---
 
-**Summary:** Run `supabase/schema.sql` in Supabase, deploy the Node app to Cloud Run or Render with the right env vars, then build the frontend with `VITE_API_BASE_URL` set and deploy to Firebase Hosting (or your host).
+**Local dev:** `npm run dev` runs the full server (API + Vite) at `http://localhost:5001`.

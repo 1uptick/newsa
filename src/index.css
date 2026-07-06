@@ -139,6 +139,501 @@ a:not(nav a):hover {
   display: block;
   margin: 1rem 0;
 }
+.capital-detail.html-content figure {
+  margin: 1rem 0;
+}
+.capital-detail.html-content .atfx-econ-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  align-items: stretch;
+}
+.capital-detail.html-content .atfx-econ-charts-grid__cell {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+.capital-detail.html-content .atfx-econ-charts-grid__cell img {
+  margin: 0 auto;
+  border-radius: 0.375rem;
+}
+.capital-detail.html-content .atfx-econ-charts-grid__cell p {
+  margin: 0;
+}
+.capital-detail.html-content .atfx-econ-charts-grid__cell .atfx-econ-chart-solo {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
+}
+@media (max-width: 640px) {
+  .capital-detail.html-content .atfx-econ-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.capital-detail.html-content .atfx-econ-chart-solo {
+  display: block;
+  width: min(500px, 65%);
+  max-width: min(500px, 65%);
+  margin: 1.5rem auto;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+.capital-detail.html-content .atfx-econ-chart-solo img {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+  border-radius: 0.375rem;
+}
+.capital-detail.html-content figcaption {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  text-align: center;
+}
 .capital-detail.html-content div {
   margin-bottom: 0.5rem;
+}
+.capital-detail.html-content div.atfx-econ-chart-solo {
+  margin-bottom: 1.5rem;
+}
+
+/* ATFX research report canvas (right panel) */
+.atfx-report-canvas.html-content {
+  font-family: inherit;
+  line-height: 1.65;
+  color: #334155;
+  max-width: none;
+}
+.atfx-report-canvas.html-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #020617;
+  line-height: 1.3;
+}
+.atfx-report-canvas.html-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  line-height: 1.35;
+}
+.atfx-report-canvas.html-content h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+.atfx-report-canvas.html-content p {
+  margin-bottom: 0.875rem;
+  color: #334155;
+  line-height: 1.65;
+}
+.atfx-report-canvas.html-content p:last-child {
+  margin-bottom: 0;
+}
+.atfx-report-canvas.html-content ul,
+.atfx-report-canvas.html-content ol {
+  margin: 0.5rem 0 1rem 1.25rem;
+  padding: 0;
+}
+.atfx-report-canvas.html-content li {
+  margin-bottom: 0.375rem;
+  color: #334155;
+}
+.atfx-report-canvas.html-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+.atfx-report-canvas.html-content th,
+.atfx-report-canvas.html-content td {
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+.atfx-report-canvas.html-content table.atfx-report-table--performance th,
+.atfx-report-canvas.html-content table.atfx-report-table--performance td {
+  text-align: center;
+  vertical-align: middle;
+}
+.atfx-report-canvas.html-content .atfx-report-table--levels {
+  table-layout: fixed;
+  width: 100%;
+}
+.atfx-report-canvas.html-content .atfx-report-table--levels th:nth-child(1),
+.atfx-report-canvas.html-content .atfx-report-table--levels td:nth-child(1),
+.atfx-report-canvas.html-content .atfx-report-table--levels th:nth-child(2),
+.atfx-report-canvas.html-content .atfx-report-table--levels td:nth-child(2) {
+  width: 50%;
+  text-align: center;
+  vertical-align: middle;
+}
+.atfx-report-canvas.html-content .atfx-level--resistance {
+  color: #16a34a;
+  font-weight: 600;
+}
+.atfx-report-canvas.html-content .atfx-level--support {
+  color: #dc2626;
+  font-weight: 600;
+}
+.atfx-report-canvas.html-content th {
+  font-weight: 600;
+  background: #f8fafc;
+  color: #0f172a;
+}
+.atfx-report-canvas.html-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem auto;
+  border-radius: 0.5rem;
+}
+.atfx-report-canvas.html-content .atfx-econ-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin: 1rem 0;
+  align-items: stretch;
+}
+.atfx-report-canvas.html-content .atfx-econ-charts-grid__cell {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+.atfx-report-canvas.html-content .atfx-econ-charts-grid__cell img {
+  margin: 0 auto;
+  border-radius: 0.375rem;
+}
+.atfx-report-canvas.html-content .atfx-econ-charts-grid__cell p {
+  margin: 0;
+}
+.atfx-report-canvas.html-content .atfx-econ-charts-grid__cell .atfx-econ-chart-solo {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
+}
+@media (max-width: 640px) {
+  .atfx-report-canvas.html-content .atfx-econ-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.atfx-report-canvas.html-content .atfx-econ-chart-solo {
+  display: block;
+  width: min(500px, 65%);
+  max-width: min(500px, 65%);
+  margin: 1rem auto;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+.atfx-report-canvas.html-content .atfx-econ-chart-solo img {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+  border-radius: 0.375rem;
+}
+.atfx-report-canvas.html-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.atfx-report-canvas.html-content a:hover {
+  color: var(--color-primary-dark);
+}
+.atfx-report-canvas.html-content strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Economic calendar impact bars (High / Medium / Low) */
+.atfx-report-canvas.html-content .atfx-report-table--calendar th:last-child,
+.atfx-report-canvas.html-content .atfx-report-table--calendar td:last-child {
+  text-align: center;
+  width: 4.5rem;
+  vertical-align: middle;
+}
+.atfx-report-canvas.html-content .atfx-impact {
+  display: inline-flex;
+  gap: 3px;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 14px;
+  vertical-align: middle;
+}
+.atfx-report-canvas.html-content .atfx-impact__bar {
+  display: block;
+  width: 5px;
+  height: 6px;
+  border-radius: 1px;
+  background: #e2e8f0;
+}
+.atfx-report-canvas.html-content .atfx-impact--high .atfx-impact__bar--on {
+  background: #dc2626;
+}
+.atfx-report-canvas.html-content .atfx-impact--high .atfx-impact__bar--on:nth-child(1) {
+  height: 8px;
+}
+.atfx-report-canvas.html-content .atfx-impact--high .atfx-impact__bar--on:nth-child(2) {
+  height: 11px;
+}
+.atfx-report-canvas.html-content .atfx-impact--high .atfx-impact__bar--on:nth-child(3) {
+  height: 14px;
+}
+.atfx-report-canvas.html-content .atfx-impact--medium .atfx-impact__bar--on {
+  background: #f97316;
+}
+.atfx-report-canvas.html-content .atfx-impact--medium .atfx-impact__bar--on:nth-child(1) {
+  height: 8px;
+}
+.atfx-report-canvas.html-content .atfx-impact--medium .atfx-impact__bar--on:nth-child(2) {
+  height: 11px;
+}
+.atfx-report-canvas.html-content .atfx-impact--low .atfx-impact__bar--on {
+  background: #eab308;
+  height: 8px;
+}
+
+/* Research report chat input — news HTML preview */
+.research-chat-input-html.html-content p {
+  margin: 0 0 0.5rem;
+  line-height: 1.45;
+}
+.research-chat-input-html.html-content p:last-child {
+  margin-bottom: 0;
+}
+.research-chat-input-html.html-content a {
+  color: #c45f00;
+  word-break: break-all;
+}
+.research-chat-input-html.html-content a:hover {
+  text-decoration: underline;
+}
+.research-chat-input-html.html-content strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+.research-chat-input-news {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.research-chat-input-news__media {
+  flex-shrink: 0;
+  width: 7.5rem;
+  height: 5rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  box-sizing: border-box;
+}
+.research-chat-input-news__media img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.research-chat-input-news__body {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.research-chat-input-news__summary {
+  margin: 0 0 0.5rem;
+}
+.research-chat-input-news__summary > p {
+  margin: 0 0 0.25rem;
+}
+.research-chat-input-news__summary-body {
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+.research-chat-input-news__summary-body img {
+  max-width: min(100%, 16rem);
+  max-height: 8rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0.375rem 0;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+.research-chat-input-news__summary-body div {
+  max-width: 100%;
+}
+.research-chat-input-news__summary-body div img {
+  max-width: min(100%, 16rem);
+}
+.research-chat-input-news__lead {
+  color: #334155;
+  font-size: 0.8125rem;
+}
+
+@keyframes market-open-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.market-open-pulse {
+  animation: market-open-pulse 1.5s ease-in-out infinite;
+}
+
+/* World map index bubbles — suppress browser focus ring on mouse click */
+.market-map-index-bubble {
+  outline: none;
+}
+.market-map-index-bubble:focus {
+  outline: none;
+}
+.market-map-index-bubble:focus-visible > rect:first-of-type {
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 3px rgba(255, 121, 0, 0.4));
+}
+
+@keyframes qa-typewriter-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.qa-typewriter-active::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 1px;
+  background: #ff7900;
+  vertical-align: text-bottom;
+  animation: qa-typewriter-caret 0.7s step-end infinite;
+}
+
+/* Overall market HTML reports — heading + table styles (matches research canvas) */
+.atfx-qa-html-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #020617;
+  line-height: 1.3;
+}
+.atfx-qa-html-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  line-height: 1.35;
+}
+.atfx-qa-html-content h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+/* Overall market HTML reports — 2-column hourly chart grid (matches research canvas) */
+.atfx-qa-html-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.75rem auto;
+  border-radius: 0.5rem;
+}
+.atfx-qa-html-content .atfx-econ-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+  align-items: stretch;
+}
+.atfx-qa-html-content .atfx-econ-charts-grid__cell {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+.atfx-qa-html-content .atfx-econ-charts-grid__cell img {
+  margin: 0 auto;
+  border-radius: 0.375rem;
+}
+.atfx-qa-html-content .atfx-econ-charts-grid__cell p {
+  margin: 0;
+}
+.atfx-qa-html-content table.atfx-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  margin: 0.75rem 0;
+}
+.atfx-qa-html-content table.atfx-report-table th,
+.atfx-qa-html-content table.atfx-report-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.375rem 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.atfx-qa-html-content table.atfx-report-table th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .atfx-qa-html-content .atfx-econ-charts-grid {
+    grid-template-columns: 1fr;
+  }
 }

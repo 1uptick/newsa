@@ -1,43 +1,50 @@
-# Security
+# Security audit notes
 
-## API and secrets architecture
+Findings from checking production-facing APIs and config. Address these in production.
 
-- **All external APIs and secrets are centralized on the server** in `server/config.ts`. The client never receives API keys, Supabase service role key, OpenRouter, Airtable, SMTP passwords, or Firebase Admin credentials.
-- **Client → server only**: The frontend talks to your backend via `/api/*` (e.g. `apiUrl("/api/news")`, `authFetch("/api/capitalkeywords")`). All secret-backed operations (Airtable, Supabase, OpenRouter, email, Firebase Admin) run in `server.ts` and use `server/config.ts`.
+---
 
-## What is allowed on the client
+## 1. API exposure and auth
 
-- **`import.meta.env.VITE_*`** only. Vite exposes only variables prefixed with `VITE_` to the client bundle. Used for:
-  - `VITE_API_BASE_URL` – optional; backend URL when frontend is hosted separately.
-  - `VITE_FIREBASE_*` – Firebase client SDK config (API key, project ID, etc.). These are **public** by design; restrict your Firebase API key by domain in the Firebase Console.
+### Fixed in this pass
 
-## What must never be exposed to the client
+- **`GET /api/airtable/check`** — Was unauthenticated and returned `baseId`, `tableId`, and record count. **Change:** Now protected with `authenticateToken` + `requireAdmin`. Only admins can call it.
+- **`GET /api/smtp/status`** — Was unauthenticated and could reveal SMTP configured/verified status and error details. **Change:** Now protected with `authenticateToken` + `requireAdmin`. Only admins can call it.
 
-- `AIRTABLE_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`
-- `FIREBASE_SERVICE_ACCOUNT` (or path to the JSON key file)
-- `SMTP_PASS`, `SMTP_USER`, and any other secrets
+### Intentionally public (no auth)
 
-Do **not** inject these via `vite.config.ts` `define` or any build step into the client bundle.
+- **`GET /api/ping`** — Returns `{ pong: true }`. Safe for health checks and load balancers; no secrets.
+- **`GET /api/auth/status`** — Returns Firebase Admin readiness. Needed for login flow; no secrets.
+- **`POST /api/auth/verify-invitation`**, **`/api/auth/use-invitation`**, **`/api/auth/forgot-password`**, **`/api/auth/reset-password`** — Auth flows; no token required by design. All are rate-limited where applicable.
 
-## Security check
+### Protected (auth and/or admin)
 
-Run the script to detect accidental exposure of server-only env vars in client code and to ensure `.env` is gitignored:
+- All other `/api/*` routes use `authenticateToken`. Admin-only routes also use `requireAdmin` (e.g. `/api/admin/*`, `/api/airtable/check`, `/api/smtp/status`, capital sync, cache management).
 
-```bash
-npm run security-check
-```
-(Uses `scripts/security-check.cjs`.)
+---
 
-It checks:
+## 2. Recommendations
 
-1. No `process.env.*` or non-`VITE_` `import.meta.env.*` in `src/`
-2. `.gitignore` includes `.env` (or `.env*`)
-3. `vite.config.ts` does not inject server secret names into the client
+1. **Environment variables**  
+   Never commit `.env` or put secrets in client bundles. Ensure production uses env vars (e.g. Cloud Run/Firebase env config) and that `VITE_*` is the only prefix exposed to the client.
 
-## Good practices
+2. **Rate limiting**  
+   Auth endpoints use limiters; consider adding a general rate limit for `/api` to reduce abuse (e.g. brute force, scraping).
 
-- Keep `.env` out of version control (use `.env.example` with placeholders only).
-- In production, use environment variables or a secrets manager; do not commit `.env`.
-- Restrict Firebase API key by authorized domains in Firebase Console.
-- Use HTTPS in production; the app uses cookies/headers for auth.
-- Admin-only routes are protected by `requireAdmin`; sensitive operations (invitations, user list, etc.) are behind `/api/admin/*` and Firebase ID token verification.
+3. **CORS**  
+   If the app is served from a different origin than the API, configure CORS explicitly for that origin instead of allowing all.
+
+4. **Sensitive endpoints**  
+   If you add more “status” or “check” endpoints that expose config or infrastructure details, protect them with `authenticateToken` and `requireAdmin` (or equivalent) before deploying to production.
+
+---
+
+## 3. Quick reference
+
+| Endpoint                 | Auth        | Notes                    |
+|--------------------------|------------|---------------------------|
+| `GET /api/ping`          | None       | Health check only         |
+| `GET /api/auth/status`   | None       | Firebase readiness        |
+| `GET /api/airtable/check`| Admin only | Was public; now fixed     |
+| `GET /api/smtp/status`   | Admin only | Was public; now fixed     |
+| All other `/api/*`       | Token ± Admin | Per-route middleware |
