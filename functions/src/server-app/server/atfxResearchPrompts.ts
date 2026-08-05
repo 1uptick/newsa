@@ -10,6 +10,16 @@ import { maxEconomicChartsAllowed, userRequestedMacroFigures, isAssetFocusedArti
 import { isChartOnlySectionEditRequest, isReplaceChartSectionEditRequest } from "./atfxReportHtmlSections.js";
 import { reportHtmlStructurePromptBlock, reportTableHtmlPromptBlock } from "./atfxReportTableHtml.js";
 
+/**
+ * Returns true when the user message is about a specific recently-occurred market event
+ * (central bank decision, macro data release, etc.) that has an immediate post-event
+ * market reaction which may differ from the prior multi-month trend.
+ * Used to force `recency: "day"` and surface past-calendar outcomes.
+ */
+export function isRecentEventDrivenTopic(userMessage: string): boolean {
+  return /\b(fomc|fed\s+meeting|rate\s+decision|central\s+bank|nfp|non.?farm\s+payrolls?|payrolls?\s+report|cpi|inflation\s+print|inflation\s+data|pmi|purchasing\s+managers|ecb|boj|boe|rba|rbnz|pboc|jobs\s+report|employment\s+report|gdp\s+release|gdp\s+report)\b/i.test(userMessage);
+}
+
 /** Section-level content plan produced in the planning phase and consumed by the writer. */
 export type SectionContentBrief = {
   title: string;
@@ -519,6 +529,10 @@ function toolsSelectionBlock(userMessage: string): string {
   const assetFocused = isAssetFocusedArticle(userMessage);
   const goldSilver = isGoldSilverArticle(userMessage);
   const hybrid = isMacroCommodityHybridTopic(userMessage);
+  const eventDriven = isRecentEventDrivenTopic(userMessage);
+  const eventRecencyNote = eventDriven
+    ? `\nEVENT-DRIVEN RECENCY RULE: This topic involves a specific recently-occurred market event (FOMC, NFP, CPI, central bank decision, etc.). Set recency to "day" — do NOT use "week" or "month". A wider window returns pre-event positioning articles that misrepresent the post-event market direction. Also include "calendar" in tools_needed so the actual event outcome (actual vs forecast vs previous) is surfaced from the recent past.`
+    : "";
   return `Research tools (pick the MINIMUM set — do not default to everything):
 - "news" — recent headlines and catalysts (almost always useful).
 - "quote" — live prices for the primary instrument(s). Only when instruments is non-empty.
@@ -529,7 +543,7 @@ function toolsSelectionBlock(userMessage: string): string {
 - "treasury" — US treasury yields. Only when rates/yields/Fed/DXY are central to the story.
 - "profile" / "ratios" — single-stock fundamentals when the article focuses on one equity ticker.
 
-${goldSilver ? "This request is gold/silver — include calendar (US high-impact events) plus news, quote, and chart." : hybrid ? "This request combines macro figures (e.g. PMI/manufacturing) with a commodity — include news, quote, chart for the commodity, and econ_chart for macro figure charts." : assetFocused ? 'This request looks asset-focused (stock/crypto/non-precious commodity) — prefer news+quote+chart only and omit calendar unless explicitly requested.' : "Include calendar only if macro catalysts are material to this specific article."}`;
+${goldSilver ? "This request is gold/silver — include calendar (US high-impact events) plus news, quote, and chart." : hybrid ? "This request combines macro figures (e.g. PMI/manufacturing) with a commodity — include news, quote, chart for the commodity, and econ_chart for macro figure charts." : assetFocused ? 'This request looks asset-focused (stock/crypto/non-precious commodity) — prefer news+quote+chart only and omit calendar unless explicitly requested.' : "Include calendar only if macro catalysts are material to this specific article."}${eventRecencyNote}`;
 }
 
 /** Client-sent marker when a research article starts from ATFX Quick Analysis. */
@@ -720,6 +734,15 @@ export function buildPlanUserPrompt(
 ): string {
   const maxEcon = maxEconomicChartsAllowed(userMessage);
   const fromQuickAnalysis = isQuickAnalysisResearchRequest(userMessage);
+  const eventDriven = isRecentEventDrivenTopic(userMessage);
+  const eventDrivenPlanBlock = eventDriven
+    ? `\nEVENT-DRIVEN ARTICLE (mandatory overrides):
+- This topic covers a specific recently-occurred market event (FOMC, NFP, CPI, central bank rate decision, PMI, GDP release, etc.).
+- Set recency to "day" in the JSON output — REQUIRED. A "week" or "month" window returns pre-event articles that misrepresent the post-event direction.
+- research_query MUST ask for the IMMEDIATE MARKET REACTION after the event (e.g., "how did DXY and major FX pairs react after the July 2026 FOMC decision?"), NOT the pre-event outlook or multi-month trend narrative.
+- Include "calendar" in tools_needed — the calendar now covers the past 14 days and will show the actual event outcome (actual vs forecast vs previous), grounding the article in the real result.
+- content_thesis MUST reflect the post-event market state based on what actually happened, not training-data assumptions about what "should" happen.`
+    : "";
   const customInstructions = normalizeCustomStyleInstructions(options.customStyleInstructions);
   const styleInstruction =
     options.style === "auto"
@@ -778,6 +801,7 @@ Tailor section_outline, section_briefs, SEO fields, content_thesis, research_que
         : " Let the topic drive structure — do not assume every article needs price symbols or market-data tools."
   }
 
+${eventDrivenPlanBlock}
 ${fromQuickAnalysis ? `${quickAnalysisResearchPlanningBlock(userMessage, options, mergedSymbolHints)}\n\n` : ""}${instrumentsBlock}
 
 Return ONLY a JSON object:
@@ -849,6 +873,7 @@ Additional rules:
 - Economic calendar tables: use ONLY High impact rows from CALENDAR_TABLE in the research brief (exact dates/events). Never reuse example dates from instructions.
 - Economic calendar placement: ALWAYS near the end of the article (last or second-to-last <h2> section), not in the opening sections.
 - For Q&A style: report_html is REQUIRED — format the full article as Q&A inside <article>; never reply-only.
+- POST-EVENT RECENCY RULE: When the article is anchored to a specific named market event (FOMC meeting, central bank rate decision, NFP, CPI print, PMI release, GDP report), the immediate post-event market direction from the NEWS section is the current market state. Do NOT let the longer-term TA trend (which reflects multi-month price history) override the post-event narrative. If the CALENDAR section shows an actual outcome (e.g., Fed held rates, NFP missed), that outcome and any corresponding post-event price reaction in NEWS take priority over the TA trend bias. Example: if NEWS reports "DXY fell sharply after the FOMC decision", the article thesis must reflect USD weakness as the immediate market state — do not rephrase it as "USD strength driven by Fed signals". Frame the TA trend as historical context ("prior to the decision, DXY had been supported…") and the post-event reaction as the current narrative lead.
 
 Return ONLY valid JSON: { "reply": "...", "title": "...", "report_html": "..." }
 The JSON "title" must match the <h1> text inside report_html.

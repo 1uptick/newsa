@@ -1679,7 +1679,7 @@ async function runResearchPhase(
       tasks.push({
         name: "get_fmp_economic_calendar",
         args: {
-          fromDate: today,
+          fromDate: isoDateOffset(-14), // include past 14 days so recent event outcomes (FOMC, NFP, CPI) appear with actuals
           toDate: calendarTo,
           importance: "high",
           ...(calCountries.length ? { countries: calCountries } : {}),
