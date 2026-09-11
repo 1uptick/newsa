@@ -104,7 +104,7 @@ a:hover {
   color: var(--ks-header-ink);
 }
 
-.ks-masthead-top a:hover {
+.ks-masthead-top a:hover:not(.ks-login) {
   color: var(--ks-accent);
 }
 
