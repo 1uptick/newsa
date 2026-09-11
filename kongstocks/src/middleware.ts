@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const RESERVED_ONE = new Set([
+  'admin',
+  'api',
+  'category',
+  'p',
+  'fonts',
+  'llms.txt',
+  'sitemap.xml',
+  'robots.txt',
+])
+
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone()
   const { pathname, searchParams } = url
@@ -20,6 +31,13 @@ export function middleware(req: NextRequest) {
   ) {
     url.pathname = pathname.replace(/\/+$/, '')
     return NextResponse.redirect(url, 301)
+  }
+
+  const one = pathname.match(/^\/([^/]+)$/)
+  if (one && !RESERVED_ONE.has(one[1]) && !one[1].includes('.')) {
+    url.pathname = '/api/legacy-page'
+    url.search = `?slug=${encodeURIComponent(one[1])}`
+    return NextResponse.rewrite(url)
   }
 
   return NextResponse.next()
