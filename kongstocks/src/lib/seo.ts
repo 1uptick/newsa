@@ -55,6 +55,15 @@ export function mediaUrl(image: unknown): string | undefined {
   return undefined
 }
 
+function normalizeTitleSuffix(value?: string | null) {
+  const raw = value == null ? DEFAULT_SEO.titleSuffix : value
+  const trimmed = raw.trim()
+  if (!trimmed) return DEFAULT_SEO.titleSuffix
+  return trimmed.startsWith('·') || trimmed.startsWith('|') || trimmed.startsWith('-')
+    ? ` ${trimmed}`
+    : ` ${trimmed}`
+}
+
 export function pageTitle(seoTitle: string | null | undefined, title: string, settings: SeoSettings) {
   if (seoTitle?.trim()) return seoTitle.trim()
   if (title === settings.siteName) return settings.siteName
@@ -85,7 +94,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       siteName: theme.siteName,
       tagline: theme.tagline,
       seoDescription: doc.seoDescription?.trim() || theme.tagline || DEFAULT_SEO.seoDescription,
-      titleSuffix: doc.titleSuffix?.trim() || DEFAULT_SEO.titleSuffix,
+      titleSuffix: normalizeTitleSuffix(doc.titleSuffix),
       publisherBlurb: doc.publisherBlurb?.trim() || DEFAULT_SEO.publisherBlurb,
       defaultOgImage: mediaUrl(doc.defaultOgImage),
     }
