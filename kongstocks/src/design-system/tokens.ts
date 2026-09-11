@@ -20,25 +20,12 @@ export const DEFAULT_THEME = {
 
 export type ThemeTokens = typeof DEFAULT_THEME
 
-function hexLuminance(hex: string) {
-  const raw = hex.trim().replace('#', '')
-  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(raw)) return 0
-  const full = raw.length === 3 ? raw.split('').map((c) => `${c}${c}`).join('') : raw
-  const r = parseInt(full.slice(0, 2), 16)
-  const g = parseInt(full.slice(2, 4), 16)
-  const b = parseInt(full.slice(4, 6), 16)
-  return (r * 299 + g * 587 + b * 114) / 1000
-}
-
 export function themeToCssVars(theme: Partial<ThemeTokens> = {}) {
   const t = { ...DEFAULT_THEME, ...theme }
   const compact = t.density !== 'comfortable'
-  const header = t.headerBg || DEFAULT_THEME.headerBg
-  const lightHeader = hexLuminance(header) > 160
   return {
-    '--ks-header': header,
-    '--ks-header-ink': lightHeader ? '#111111' : '#FFFFFF',
-    '--ks-logo-filter': lightHeader ? 'brightness(0)' : 'none',
+    '--ks-header': t.headerBg || DEFAULT_THEME.headerBg,
+    '--ks-header-ink': '#111111',
     '--ks-accent': t.accent || DEFAULT_THEME.accent,
     '--ks-accent-ink': '#FFFFFF',
     '--ks-bg': t.background || DEFAULT_THEME.background,

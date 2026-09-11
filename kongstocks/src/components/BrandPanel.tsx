@@ -55,12 +55,7 @@ export async function BrandPanel({ initPageResult, params, searchParams }: Admin
                   alignItems: 'center',
                 }}
               >
-                <img
-                  className="ks-wordmark"
-                  src={theme.logoUrl}
-                  alt={theme.siteName}
-                  style={{ height: 28, width: 'auto', filter: 'var(--ks-logo-filter)' }}
-                />
+                <img src={theme.logoUrl} alt={theme.siteName} style={{ height: 28, width: 'auto' }} />
               </div>
               <BrandUploadForm field="logo" label="Logo" accept="image/png,image/svg+xml,image/webp,image/jpeg" />
             </section>
