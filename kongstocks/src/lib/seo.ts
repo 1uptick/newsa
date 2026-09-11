@@ -56,12 +56,9 @@ export function mediaUrl(image: unknown): string | undefined {
 }
 
 function normalizeTitleSuffix(value?: string | null) {
-  const raw = value == null ? DEFAULT_SEO.titleSuffix : value
-  const trimmed = raw.trim()
+  const trimmed = (value ?? DEFAULT_SEO.titleSuffix).trim()
   if (!trimmed) return DEFAULT_SEO.titleSuffix
-  return trimmed.startsWith('·') || trimmed.startsWith('|') || trimmed.startsWith('-')
-    ? ` ${trimmed}`
-    : ` ${trimmed}`
+  return ` ${trimmed}`
 }
 
 export function pageTitle(seoTitle: string | null | undefined, title: string, settings: SeoSettings) {
