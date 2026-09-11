@@ -3,7 +3,7 @@ export const DEFAULT_THEME = {
   tagline: '港股新聞及深度分析',
   footerText: '內容僅供參考，不構成投資建議。',
   accent: '#E3338F',
-  headerBg: '#FFFFFF',
+  headerBg: '#080808',
   background: '#FFFFFF',
   density: 'compact' as 'compact' | 'comfortable',
   nav: [
@@ -25,7 +25,7 @@ export function themeToCssVars(theme: Partial<ThemeTokens> = {}) {
   const compact = t.density !== 'comfortable'
   return {
     '--ks-header': t.headerBg || DEFAULT_THEME.headerBg,
-    '--ks-header-ink': '#111111',
+    '--ks-header-ink': '#FFFFFF',
     '--ks-accent': t.accent || DEFAULT_THEME.accent,
     '--ks-accent-ink': '#FFFFFF',
     '--ks-bg': t.background || DEFAULT_THEME.background,

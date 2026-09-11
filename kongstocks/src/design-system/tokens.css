@@ -44,8 +44,8 @@
 }
 
 :root {
-  --ks-header: #ffffff;
-  --ks-header-ink: #111111;
+  --ks-header: #080808;
+  --ks-header-ink: #ffffff;
   --ks-accent: #e3338f;
   --ks-accent-ink: #ffffff;
   --ks-bg: #ffffff;
@@ -97,7 +97,6 @@ a:hover {
   background: var(--ks-header);
   color: var(--ks-header-ink);
   font-family: var(--ks-sans);
-  border-bottom: 1px solid var(--ks-line);
 }
 
 .ks-masthead a:hover {
@@ -134,7 +133,7 @@ a:hover {
 }
 
 .ks-nav a {
-  color: var(--ks-header-ink);
+  color: #fff;
 }
 
 .ks-kicker {
