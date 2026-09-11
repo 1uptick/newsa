@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { formatTime, postPath } from '@/lib/site'
+import { firstBodyImage } from '@/lib/uploads'
 import { StoryList } from '@/components/StoryList'
 import { JsonLd } from '@/components/JsonLd'
 import { findCategoryBySlug } from '@/lib/content'
@@ -72,6 +73,7 @@ export default async function CategoryPage({ params }: Args) {
           href: postPath(post.publishedAt, post.slug),
           title: post.title,
           time: formatTime(post.publishedAt),
+          image: firstBodyImage(post.bodyHtml),
         }))}
       />
     </main>

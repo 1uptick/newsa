@@ -4,6 +4,7 @@ import config from '@payload-config'
 import { DEFAULT_THEME } from '@/design-system/tokens'
 import { getTheme } from '@/lib/theme'
 import { categoryName, displaySlug, postPath } from '@/lib/site'
+import { firstBodyImage } from '@/lib/uploads'
 
 export const DEFAULT_SEO = {
   seoDescription: DEFAULT_THEME.tagline,
@@ -93,7 +94,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       seoDescription: doc.seoDescription?.trim() || theme.tagline || DEFAULT_SEO.seoDescription,
       titleSuffix: normalizeTitleSuffix(doc.titleSuffix),
       publisherBlurb: doc.publisherBlurb?.trim() || DEFAULT_SEO.publisherBlurb,
-      defaultOgImage: mediaUrl(doc.defaultOgImage),
+      defaultOgImage: mediaUrl(doc.defaultOgImage) || absoluteUrl('/og.png'),
     }
   } catch {
     return {
@@ -102,6 +103,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       seoDescription: theme.tagline || DEFAULT_SEO.seoDescription,
       titleSuffix: DEFAULT_SEO.titleSuffix,
       publisherBlurb: DEFAULT_SEO.publisherBlurb,
+      defaultOgImage: absoluteUrl('/og.png'),
     }
   }
 }
@@ -168,6 +170,7 @@ export function organizationJsonLd(settings: SeoSettings) {
     name: settings.siteName,
     url: siteUrl(),
     description: settings.seoDescription,
+    logo: absoluteUrl('/logo.png'),
   }
 }
 
@@ -287,6 +290,7 @@ export function postSeo(post: {
   title: string
   slug?: string | null
   excerpt?: string | null
+  bodyHtml?: string | null
   seoTitle?: string | null
   seoDescription?: string | null
   publishedAt: string
@@ -303,7 +307,7 @@ export function postSeo(post: {
       ? String((post.author as { name: string }).name)
       : undefined
   const section = categoryName(post)
-  const image = mediaUrl(post.heroImage)
+  const image = mediaUrl(post.heroImage) || firstBodyImage(post.bodyHtml)
   return {
     path,
     title,

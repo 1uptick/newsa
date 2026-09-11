@@ -11,7 +11,8 @@
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "seed": "cross-env NODE_OPTIONS=--no-deprecation tsx src/scripts/seed.ts",
-    "import:wp": "cross-env NODE_OPTIONS=--no-deprecation tsx src/scripts/import-wp.ts"
+    "import:wp": "cross-env NODE_OPTIONS=--no-deprecation tsx src/scripts/import-wp.ts",
+    "rewrite:uploads": "cross-env NODE_OPTIONS=--no-deprecation tsx src/scripts/rewrite-upload-urls.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.49.0",

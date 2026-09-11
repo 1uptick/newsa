@@ -111,16 +111,15 @@ a:hover {
 }
 
 .ks-wordmark {
-  font-family: var(--ks-sans);
-  font-weight: 700;
-  font-size: 1.35rem;
-  letter-spacing: 0.04em;
-  color: #fff;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  line-height: 0;
 }
 
-.ks-wordmark span {
-  color: var(--ks-accent);
+.ks-wordmark img {
+  display: block;
+  height: 28px;
+  width: auto;
 }
 
 .ks-nav {
@@ -168,6 +167,42 @@ a:hover {
 .ks-lead {
   border-right: 1px solid var(--ks-line);
   padding-right: 1.5rem;
+}
+
+.ks-thumb {
+  display: block;
+}
+
+.ks-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  background: var(--ks-line);
+}
+
+.ks-lead .ks-thumb {
+  margin: 0 0 0.75rem;
+}
+
+.ks-lead .ks-thumb img {
+  aspect-ratio: 16 / 9;
+}
+
+.ks-card.ks-has-thumb {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  column-gap: 0.75rem;
+  align-items: start;
+}
+
+.ks-card.ks-has-thumb .ks-thumb {
+  grid-row: 1 / span 5;
+}
+
+.ks-card .ks-thumb img {
+  width: 96px;
+  height: 72px;
 }
 
 .ks-lead h2 {

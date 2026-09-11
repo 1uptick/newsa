@@ -5,6 +5,7 @@ type Item = {
   title: string
   kicker?: string
   time?: string
+  image?: string
 }
 
 export function StoryList({ title, items }: { title: string; items: Item[] }) {

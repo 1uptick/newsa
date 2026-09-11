@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { categoryName, formatTime, postPath } from '@/lib/site'
+import { firstBodyImage } from '@/lib/uploads'
 import { StoryCard } from '@/components/StoryCard'
 import { StoryList } from '@/components/StoryList'
 import { buildMetadata, getSeoSettings } from '@/lib/seo'
@@ -43,6 +44,7 @@ export default async function HomePage() {
           kicker={categoryName(lead) || '頭條'}
           time={formatTime(lead.publishedAt)}
           excerpt={lead.excerpt}
+          image={firstBodyImage(lead.bodyHtml)}
         />
       ) : (
         <p>暫無文章。</p>
@@ -55,6 +57,7 @@ export default async function HomePage() {
             title={post.title}
             kicker={categoryName(post)}
             time={formatTime(post.publishedAt)}
+            image={firstBodyImage(post.bodyHtml)}
           />
         ))}
       </div>
@@ -65,6 +68,7 @@ export default async function HomePage() {
           title: post.title,
           kicker: categoryName(post),
           time: formatTime(post.publishedAt),
+          image: firstBodyImage(post.bodyHtml),
         }))}
       />
     </main>

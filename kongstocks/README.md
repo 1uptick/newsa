@@ -17,6 +17,7 @@ npm run dev
 | Path | Role |
 |---|---|
 | `/opt/kongstocks/app` | Application source |
+| `/opt/kongstocks/wp-content/uploads` | Live WP uploads (outside the app tree) |
 | `/opt/kongstocks/deploy/.env.staging` / `.env.prod` / `.env.postgres` | Secrets (not in git) |
 | `127.0.0.1:5433` | Staging Postgres |
 | `127.0.0.1:5434` | Production Postgres |
@@ -42,4 +43,11 @@ Point workflows at `POST /api/n8n/posts` with `Authorization: Bearer $PAYLOAD_AP
 
 ```bash
 WP_EXPORT=/path/to/wp-posts.json npm run import:wp
+```
+
+Post images stay on disk at `/opt/kongstocks/wp-content/uploads` and are served by nginx at `/wp-content/uploads/`. Re-sync from Hostinger (resume-able) and rewrite imported HTML before DNS cutover:
+
+```bash
+/opt/kongstocks/scripts/sync-wp-uploads.sh
+cd /opt/kongstocks/app && set -a && source /opt/kongstocks/deploy/.env.staging && set +a && npm run rewrite:uploads
 ```
