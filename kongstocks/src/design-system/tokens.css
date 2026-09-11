@@ -144,7 +144,7 @@ a:hover {
 
 .ks-hero {
   width: 100%;
-  height: clamp(200px, 38vw, 420px);
+  height: clamp(220px, 26vw, 360px);
   overflow: hidden;
   background: #0b1220;
 }
@@ -154,7 +154,7 @@ a:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 35%;
+  object-position: bottom center;
 }
 
 .ks-catnav {

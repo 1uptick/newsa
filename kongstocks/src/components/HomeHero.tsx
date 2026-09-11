@@ -4,8 +4,8 @@ export function HomeHero() {
       <img
         src="/hero-hongkong.jpg"
         alt="香港城市景觀"
-        width={1065}
-        height={710}
+        width={2130}
+        height={1420}
       />
     </section>
   )
