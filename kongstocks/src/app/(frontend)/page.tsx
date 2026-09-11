@@ -5,6 +5,8 @@ import { categoryName, formatTime, postPath } from '@/lib/site'
 import { firstBodyImage } from '@/lib/uploads'
 import { StoryCard } from '@/components/StoryCard'
 import { StoryList } from '@/components/StoryList'
+import { HomeHero } from '@/components/HomeHero'
+import { PageShell } from '@/components/PageShell'
 import { buildMetadata, getSeoSettings } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +37,8 @@ export default async function HomePage() {
   const rest = docs.slice(4)
 
   return (
-    <main className="ks-home">
+    <PageShell hero={<HomeHero />}>
+      <main className="ks-home">
       {lead ? (
         <StoryCard
           lead
@@ -71,6 +74,7 @@ export default async function HomePage() {
           image: firstBodyImage(post.bodyHtml),
         }))}
       />
-    </main>
+      </main>
+    </PageShell>
   )
 }

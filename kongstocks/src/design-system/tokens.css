@@ -123,6 +123,76 @@ a:hover {
   width: auto;
 }
 
+.ks-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  color: #111;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.ks-masthead .ks-login:hover {
+  background: var(--ks-accent);
+  color: #fff;
+}
+
+.ks-hero {
+  width: 100%;
+  height: clamp(200px, 38vw, 420px);
+  overflow: hidden;
+  background: #0b1220;
+}
+
+.ks-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.ks-catnav {
+  border-bottom: 1px solid var(--ks-line);
+  background: var(--ks-bg);
+}
+
+.ks-catnav-inner {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 2.1rem;
+  padding: 0.95rem 0 0;
+}
+
+.ks-catnav a {
+  position: relative;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--ks-ink);
+  padding: 0 0 0.7rem;
+}
+
+.ks-catnav a:hover {
+  color: var(--ks-ink);
+}
+
+.ks-catnav a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--ks-ink);
+}
+
 .ks-nav {
   display: flex;
   flex-wrap: wrap;

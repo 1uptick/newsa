@@ -6,6 +6,7 @@ import { formatTime, postPath } from '@/lib/site'
 import { firstBodyImage } from '@/lib/uploads'
 import { StoryList } from '@/components/StoryList'
 import { JsonLd } from '@/components/JsonLd'
+import { PageShell } from '@/components/PageShell'
 import { findCategoryBySlug } from '@/lib/content'
 import {
   breadcrumbJsonLd,
@@ -57,25 +58,27 @@ export default async function CategoryPage({ params }: Args) {
   const description = pageDescription(category.seoDescription, fallback, category.name, settings)
 
   return (
-    <main className="ks-article">
-      <JsonLd
-        data={[
-          collectionPageJsonLd({ title, description, path, settings }),
-          breadcrumbJsonLd([
-            { name: settings.siteName, path: '/' },
-            { name: category.name, path },
-          ]),
-        ]}
-      />
-      <StoryList
-        title={category.name}
-        items={posts.docs.map((post) => ({
-          href: postPath(post.publishedAt, post.slug),
-          title: post.title,
-          time: formatTime(post.publishedAt),
-          image: firstBodyImage(post.bodyHtml),
-        }))}
-      />
-    </main>
+    <PageShell>
+      <main className="ks-article">
+        <JsonLd
+          data={[
+            collectionPageJsonLd({ title, description, path, settings }),
+            breadcrumbJsonLd([
+              { name: settings.siteName, path: '/' },
+              { name: category.name, path },
+            ]),
+          ]}
+        />
+        <StoryList
+          title={category.name}
+          items={posts.docs.map((post) => ({
+            href: postPath(post.publishedAt, post.slug),
+            title: post.title,
+            time: formatTime(post.publishedAt),
+            image: firstBodyImage(post.bodyHtml),
+          }))}
+        />
+      </main>
+    </PageShell>
   )
 }

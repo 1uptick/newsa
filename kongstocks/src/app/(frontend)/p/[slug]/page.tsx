@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ArticleBody } from '@/components/ArticleBody'
 import { JsonLd } from '@/components/JsonLd'
+import { PageShell } from '@/components/PageShell'
 import { findPublishedPageBySlug } from '@/lib/content'
 import { displaySlug } from '@/lib/site'
 import {
@@ -42,18 +43,20 @@ export default async function StaticPage({ params }: Args) {
   const description = pageDescription(page.seoDescription, null, page.title, settings)
 
   return (
-    <main className="ks-article">
-      <JsonLd
-        data={[
-          webPageJsonLd({ title, description, path, settings }),
-          breadcrumbJsonLd([
-            { name: settings.siteName, path: '/' },
-            { name: page.title, path },
-          ]),
-        ]}
-      />
-      <h1>{page.title}</h1>
-      <ArticleBody html={page.bodyHtml} content={'content' in page ? page.content : undefined} />
-    </main>
+    <PageShell>
+      <main className="ks-article">
+        <JsonLd
+          data={[
+            webPageJsonLd({ title, description, path, settings }),
+            breadcrumbJsonLd([
+              { name: settings.siteName, path: '/' },
+              { name: page.title, path },
+            ]),
+          ]}
+        />
+        <h1>{page.title}</h1>
+        <ArticleBody html={page.bodyHtml} content={'content' in page ? page.content : undefined} />
+      </main>
+    </PageShell>
   )
 }

@@ -44,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|fonts|favicon.ico|icon.png|logo.png|og.png|wp-content).*)'],
+  matcher: ['/((?!_next/static|_next/image|fonts|favicon.ico|icon.png|logo.png|og.png|hero-hongkong.jpg|wp-content).*)'],
 }

@@ -42,7 +42,7 @@ export default async function FrontendLayout({ children }: { children: ReactNode
       <body className="ks-shell" style={themeToCssVars(theme) as CSSProperties}>
         <JsonLd data={websiteJsonLd(settings)} />
         <Masthead theme={theme} />
-        <div className="ks-wrap">{children}</div>
+        {children}
         <footer className="ks-footer">
           <div className="ks-wrap">{theme.footerText}</div>
         </footer>

@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { ArticleBody } from '@/components/ArticleBody'
 import { JsonLd } from '@/components/JsonLd'
 import { Kicker } from '@/components/Kicker'
+import { PageShell } from '@/components/PageShell'
 import { findPublishedPostBySlug } from '@/lib/content'
 import { displaySlug, formatTime, postPath } from '@/lib/site'
 import { getSeoSettings, postSeo } from '@/lib/seo'
@@ -36,13 +37,15 @@ export default async function ArticlePage({ params }: Args) {
   const seo = postSeo(post, settings)
 
   return (
-    <main className="ks-article">
-      <JsonLd data={seo.jsonLd} />
-      <Kicker>{seo.section || '新聞'}</Kicker>
-      <h1>{post.title}</h1>
-      <div className="ks-meta">{formatTime(post.publishedAt)}</div>
-      {post.excerpt?.trim() ? <p className="ks-standfirst">{post.excerpt.trim()}</p> : null}
-      <ArticleBody html={post.bodyHtml} content={'content' in post ? post.content : undefined} />
-    </main>
+    <PageShell>
+      <main className="ks-article">
+        <JsonLd data={seo.jsonLd} />
+        <Kicker>{seo.section || '新聞'}</Kicker>
+        <h1>{post.title}</h1>
+        <div className="ks-meta">{formatTime(post.publishedAt)}</div>
+        {post.excerpt?.trim() ? <p className="ks-standfirst">{post.excerpt.trim()}</p> : null}
+        <ArticleBody html={post.bodyHtml} content={'content' in post ? post.content : undefined} />
+      </main>
+    </PageShell>
   )
 }
