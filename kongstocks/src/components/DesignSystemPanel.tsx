@@ -24,7 +24,7 @@ export function DesignSystemPanel({ initPageResult, params, searchParams }: Admi
           <h1 style={{ margin: '16px 0 8px' }}>KongStocks 設計系統</h1>
           <p style={{ maxWidth: 720 }}>
             Bloomberg 新聞版面 + 現站主色 <code>#E3338F</code>（kongstocks.com{' '}
-            <code>--main-color-one</code>）。字型為本機 Noto Sans / Serif（繁體 + 简体），不經 CDN。
+            <code>--main-color-one</code>）。字型為本機 Noto Sans TC + SC，不經 CDN。
           </p>
           <p>
             <Link href="/admin/globals/theme">開啟自訂（顏色、導覽、密度） →</Link>
@@ -48,19 +48,19 @@ export function DesignSystemPanel({ initPageResult, params, searchParams }: Admi
 
           <h2>字級 · 繁體</h2>
           <p className="ks-kicker">港股新聞</p>
-          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-serif)', fontSize: 28, fontWeight: 700 }}>
+          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-sans)', fontSize: 28, fontWeight: 700 }}>
             恒指收跌一百四十八點 市場觀望氣氛濃厚
           </p>
-          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-serif)', fontSize: 16 }}>
+          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-sans)', fontSize: 16 }}>
             本欄所載內容僅為公開資訊之一般性觀察，並非投資建議。
           </p>
 
           <h2>字级 · 简体</h2>
           <p className="ks-kicker">港股新闻</p>
-          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-serif)', fontSize: 28, fontWeight: 700 }}>
+          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-sans)', fontSize: 28, fontWeight: 700 }}>
             恒指收跌一百四十八点 市场观望气氛浓厚
           </p>
-          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-serif)', fontSize: 16 }}>
+          <p className="ks-type-sample" style={{ fontFamily: 'var(--ks-sans)', fontSize: 16 }}>
             本栏所载内容仅为公开信息之一般性观察，并非投资建议。
           </p>
 
@@ -75,7 +75,7 @@ export function DesignSystemPanel({ initPageResult, params, searchParams }: Admi
           </div>
           <article className="ks-card" style={{ maxWidth: 360 }}>
             <p className="ks-kicker">AI 選股</p>
-            <h3 style={{ fontFamily: 'var(--ks-serif)' }}>電能實業擴展業務 股價接近近期高位</h3>
+            <h3 style={{ fontFamily: 'var(--ks-sans)' }}>電能實業擴展業務 股價接近近期高位</h3>
             <div className="ks-meta">9月11日 17:01</div>
           </article>
         </div>

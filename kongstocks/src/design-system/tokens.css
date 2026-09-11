@@ -42,34 +42,6 @@
   font-display: swap;
   src: url('/fonts/NotoSansSC-700.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'Noto Serif TC';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/NotoSerifTC-400.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Noto Serif TC';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/NotoSerifTC-700.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Noto Serif SC';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/NotoSerifSC-400.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Noto Serif SC';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/NotoSerifSC-700.woff2') format('woff2');
-}
 
 :root {
   --ks-header: #080808;
@@ -85,7 +57,7 @@
   --ks-pad: 0.7;
   --ks-max: 1180px;
   --ks-sans: 'Noto Sans TC', 'Noto Sans SC', system-ui, sans-serif;
-  --ks-serif: 'Noto Serif TC', 'Noto Serif SC', Georgia, serif;
+  --ks-serif: 'Noto Sans TC', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 * {
@@ -98,7 +70,7 @@ body {
   padding: 0;
   background: var(--ks-bg);
   color: var(--ks-ink);
-  font-family: var(--ks-serif);
+  font-family: var(--ks-sans);
   line-height: 1.55;
 }
 
