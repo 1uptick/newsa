@@ -29,9 +29,19 @@ Nginx is used instead of Caddy because this VPS already terminates TLS on nginx 
 
 ## Deploy
 
+Build staging **locally**, then push the prebuilt `.next` to the VPS. The server only restarts PM2 — it does not run `next build`.
+
 ```bash
-# on the VPS
-/opt/kongstocks/app/scripts/deploy-staging.sh
+# from this repo, on a workstation with SSH host `kongstocks-vps`
+cd kongstocks
+./scripts/deploy-staging.sh
+```
+
+`deploy-staging.sh` pulls `/opt/kongstocks/deploy/.env.staging` for the build, tunnels staging Postgres if the URL is `127.0.0.1:5433`, runs `npm run build` here, rsyncs the tree (except `node_modules` and env files), and restarts `kongstocks-staging`.
+
+```bash
+# on the VPS (restart only; used by the local script)
+/opt/kongstocks/app/scripts/restart-staging.sh
 /opt/kongstocks/app/scripts/promote.sh   # 1-click go-live
 ```
 
