@@ -3,8 +3,12 @@
 set -euo pipefail
 APP=/opt/kongstocks/app
 cd "$APP"
-npm ci
-PAYLOAD_PUSH=true npx payload migrate || true
+if [[ -f package-lock.json ]]; then npm ci; else npm install; fi
+set -a
+source /opt/kongstocks/deploy/.env.staging
+set +a
+export PAYLOAD_PUSH=true
+npx payload migrate || true
 npm run build
 mkdir -p /opt/kongstocks/releases
 if pm2 describe kongstocks-staging >/dev/null 2>&1; then

@@ -35,7 +35,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
-    push: process.env.PAYLOAD_PUSH === 'true' || process.env.NODE_ENV !== 'production',
+    push: true,
   }),
   sharp,
   serverURL: process.env.APP_URL,
