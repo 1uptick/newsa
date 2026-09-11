@@ -16,6 +16,7 @@ export const DEFAULT_THEME = {
   ],
   logoUrl: '/logo.png',
   faviconUrl: '/favicon.ico',
+  heroImageUrl: '/hero-hk.jpg',
 }
 
 export type ThemeTokens = typeof DEFAULT_THEME
