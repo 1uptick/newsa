@@ -94,16 +94,21 @@ a:hover {
 }
 
 .ks-masthead {
-  background: var(--ks-header);
-  color: var(--ks-header-ink);
+  background: var(--ks-bg);
+  color: var(--ks-ink);
   font-family: var(--ks-sans);
 }
 
-.ks-masthead a:hover {
+.ks-masthead-top {
+  background: var(--ks-header);
+  color: var(--ks-header-ink);
+}
+
+.ks-masthead-top a:hover:not(.ks-login) {
   color: var(--ks-accent);
 }
 
-.ks-masthead-inner {
+.ks-masthead-top-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -123,17 +128,58 @@ a:hover {
   width: auto;
 }
 
+.ks-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #080808;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.55rem 1.15rem;
+  white-space: nowrap;
+}
+
+.ks-login:hover {
+  background: var(--ks-accent);
+  color: var(--ks-accent-ink);
+}
+
+.ks-hero {
+  background: #f6f6f4;
+}
+
+.ks-hero img {
+  display: block;
+  width: 100%;
+  height: clamp(168px, 28vw, 320px);
+  object-fit: cover;
+  object-position: center 42%;
+}
+
 .ks-nav {
+  background: var(--ks-bg);
+  border-bottom: 1px solid var(--ks-line);
+}
+
+.ks-nav-inner {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 1.1rem;
+  justify-content: space-between;
+  gap: 0.45rem 1.25rem;
+  padding: 0.85rem 0 0.95rem;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
 .ks-nav a {
-  color: #fff;
+  color: var(--ks-ink);
+}
+
+.ks-nav a:hover {
+  color: var(--ks-accent);
 }
 
 .ks-kicker {

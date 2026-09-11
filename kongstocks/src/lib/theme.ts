@@ -9,6 +9,7 @@ export async function getTheme(): Promise<ThemeTokens> {
     const doc = (await payload.findGlobal({ slug: 'theme', depth: 1 })) as Partial<ThemeTokens> & {
       logo?: unknown
       favicon?: unknown
+      heroImage?: unknown
       nav?: ThemeTokens['nav'] | null
     }
     return {
@@ -17,6 +18,7 @@ export async function getTheme(): Promise<ThemeTokens> {
       nav: doc.nav?.length ? doc.nav : DEFAULT_THEME.nav,
       logoUrl: resolveMediaPath(doc.logo) || DEFAULT_THEME.logoUrl,
       faviconUrl: resolveMediaPath(doc.favicon) || DEFAULT_THEME.faviconUrl,
+      heroImageUrl: resolveMediaPath(doc.heroImage) || DEFAULT_THEME.heroImageUrl,
     }
   } catch {
     return DEFAULT_THEME

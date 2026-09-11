@@ -36,6 +36,16 @@ export const SiteSettings: GlobalConfig = {
               admin: { description: 'Browser tab icon (PNG or ICO). Empty = /favicon.ico' },
             },
             {
+              name: 'heroImage',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Homepage banner',
+              admin: {
+                description:
+                  'Hong Kong city image shown in the homepage hero. Empty = /hero-hk.jpg',
+              },
+            },
+            {
               name: 'nav',
               type: 'array',
               labels: { singular: '連結', plural: '導覽' },
