@@ -57,30 +57,34 @@ async function main() {
     }
   }
 
-  const sample = await payload.find({
-    collection: 'posts',
-    where: { slug: { equals: 'welcome-kongstocks' } },
-    limit: 1,
-  })
-  if (sample.docs.length === 0) {
-    const hk = await payload.find({
-      collection: 'categories',
-      where: { slug: { equals: 'hk' } },
+  try {
+    const sample = await payload.find({
+      collection: 'posts',
+      where: { slug: { equals: 'welcome-kongstocks' } },
       limit: 1,
     })
-    await payload.create({
-      collection: 'posts',
-      data: {
-        title: 'Welcome to the new KongStocks stack',
-        slug: 'welcome-kongstocks',
-        excerpt: 'Plain layout while WordPress content is migrated.',
-        bodyHtml: '<p>Staging is up. Design system comes after migration.</p>',
-        publishedAt: new Date().toISOString(),
-        categories: hk.docs.map((c) => c.id),
-        _status: 'published',
-      },
-    })
-    console.log('Created sample post')
+    if (sample.docs.length === 0) {
+      const hk = await payload.find({
+        collection: 'categories',
+        where: { slug: { equals: 'hk' } },
+        limit: 1,
+      })
+      await payload.create({
+        collection: 'posts',
+        data: {
+          title: 'Welcome to the new KongStocks stack',
+          slug: 'welcome-kongstocks',
+          excerpt: 'Plain layout while WordPress content is migrated.',
+          bodyHtml: '<p>Staging is up. Design system comes after migration.</p>',
+          publishedAt: new Date().toISOString(),
+          categories: hk.docs.map((c) => c.id),
+          _status: 'published',
+        },
+      })
+      console.log('Created sample post')
+    }
+  } catch (err) {
+    console.warn('Skipped sample post seed', err instanceof Error ? err.message : err)
   }
 
   await payload.updateGlobal({
