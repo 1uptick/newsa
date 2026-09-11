@@ -98,6 +98,10 @@ async function main() {
       background: DEFAULT_THEME.background,
       density: DEFAULT_THEME.density,
       nav: DEFAULT_THEME.nav,
+      seoDescription: DEFAULT_THEME.tagline,
+      titleSuffix: ' · KongStocks',
+      publisherBlurb:
+        'KongStocks 提供港股新聞及深度分析。內容僅供參考，不構成投資建議。引用時請附文章標題及原文網址。',
     },
   })
   console.log('Seeded theme global')

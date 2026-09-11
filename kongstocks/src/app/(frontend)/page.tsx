@@ -1,10 +1,22 @@
+import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { categoryName, formatTime, postPath } from '@/lib/site'
 import { StoryCard } from '@/components/StoryCard'
 import { StoryList } from '@/components/StoryList'
+import { buildMetadata, getSeoSettings } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSeoSettings()
+  return buildMetadata({
+    title: `${settings.siteName} · ${settings.tagline}`,
+    description: settings.seoDescription,
+    path: '/',
+    settings,
+  })
+}
 
 export default async function HomePage() {
   const payload = await getPayload({ config })

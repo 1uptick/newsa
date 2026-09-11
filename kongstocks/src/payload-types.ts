@@ -181,6 +181,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  seoDescription?: string | null;
   /**
    * WordPress term id
    */
@@ -399,6 +400,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  seoDescription?: T;
   wpId?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -509,6 +511,10 @@ export interface Theme {
   headerBg?: string | null;
   background?: string | null;
   density?: ('compact' | 'comfortable') | null;
+  seoDescription?: string | null;
+  titleSuffix?: string | null;
+  defaultOgImage?: (number | null) | Media;
+  publisherBlurb?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -531,6 +537,10 @@ export interface ThemeSelect<T extends boolean = true> {
   headerBg?: T;
   background?: T;
   density?: T;
+  seoDescription?: T;
+  titleSuffix?: T;
+  defaultOgImage?: T;
+  publisherBlurb?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

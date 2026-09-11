@@ -1,24 +1,45 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { formatTime, postPath } from '@/lib/site'
 import { StoryList } from '@/components/StoryList'
+import { JsonLd } from '@/components/JsonLd'
+import { findCategoryBySlug } from '@/lib/content'
+import {
+  breadcrumbJsonLd,
+  buildMetadata,
+  collectionPageJsonLd,
+  getSeoSettings,
+  pageDescription,
+  pageTitle,
+} from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
 type Args = { params: Promise<{ slug: string }> }
 
+export async function generateMetadata({ params }: Args): Promise<Metadata> {
+  const { slug } = await params
+  const category = await findCategoryBySlug(slug)
+  if (!category) return {}
+  const settings = await getSeoSettings()
+  const path = `/category/${category.slug}`
+  const fallback = `${category.name}新聞及分析｜${settings.siteName}`
+  return buildMetadata({
+    title: pageTitle(null, category.name, settings),
+    description: pageDescription(category.seoDescription, fallback, category.name, settings),
+    path,
+    settings,
+  })
+}
+
 export default async function CategoryPage({ params }: Args) {
   const { slug } = await params
-  const payload = await getPayload({ config })
-  const cats = await payload.find({
-    collection: 'categories',
-    where: { slug: { equals: slug } },
-    limit: 1,
-  })
-  const category = cats.docs[0]
+  const category = await findCategoryBySlug(slug)
   if (!category) notFound()
 
+  const payload = await getPayload({ config })
   const posts = await payload.find({
     collection: 'posts',
     where: {
@@ -28,8 +49,23 @@ export default async function CategoryPage({ params }: Args) {
     limit: 40,
   })
 
+  const settings = await getSeoSettings()
+  const path = `/category/${category.slug}`
+  const title = pageTitle(null, category.name, settings)
+  const fallback = `${category.name}新聞及分析｜${settings.siteName}`
+  const description = pageDescription(category.seoDescription, fallback, category.name, settings)
+
   return (
     <main className="ks-article">
+      <JsonLd
+        data={[
+          collectionPageJsonLd({ title, description, path, settings }),
+          breadcrumbJsonLd([
+            { name: settings.siteName, path: '/' },
+            { name: category.name, path },
+          ]),
+        ]}
+      />
       <StoryList
         title={category.name}
         items={posts.docs.map((post) => ({

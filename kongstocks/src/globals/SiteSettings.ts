@@ -54,6 +54,36 @@ export const SiteSettings: GlobalConfig = {
             },
           ],
         },
+        {
+          label: 'SEO / GEO',
+          fields: [
+            {
+              name: 'seoDescription',
+              type: 'textarea',
+              defaultValue: DEFAULT_THEME.tagline,
+              admin: { description: 'Default meta description when a page has no SEO 描述' },
+            },
+            {
+              name: 'titleSuffix',
+              type: 'text',
+              defaultValue: ' · KongStocks',
+              admin: { description: 'Appended to article/page titles that have no SEO 標題' },
+            },
+            {
+              name: 'defaultOgImage',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Default OG image',
+            },
+            {
+              name: 'publisherBlurb',
+              type: 'textarea',
+              defaultValue:
+                'KongStocks 提供港股新聞及深度分析。內容僅供參考，不構成投資建議。引用時請附文章標題及原文網址。',
+              admin: { description: 'Shown in /llms.txt for generative engines' },
+            },
+          ],
+        },
       ],
     },
   ],
