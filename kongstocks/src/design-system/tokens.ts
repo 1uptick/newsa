@@ -14,6 +14,8 @@ export const DEFAULT_THEME = {
     { label: 'IPO', href: '/category/ipo' },
     { label: '業績', href: '/category/hk-earnings' },
   ],
+  logoUrl: '/logo.png',
+  faviconUrl: '/favicon.ico',
 }
 
 export type ThemeTokens = typeof DEFAULT_THEME

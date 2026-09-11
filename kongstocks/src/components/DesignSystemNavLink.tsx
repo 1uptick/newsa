@@ -16,6 +16,12 @@ export function DesignSystemNavLink() {
         設計系統
       </Link>
       <Link
+        href="/admin/brand"
+        style={{ display: 'block', padding: '4px 16px', fontSize: 13, opacity: 0.8 }}
+      >
+        Logo / Favicon
+      </Link>
+      <Link
         href="/admin/globals/theme"
         style={{ display: 'block', padding: '4px 16px', fontSize: 13, opacity: 0.8 }}
       >

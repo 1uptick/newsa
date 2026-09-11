@@ -9,12 +9,15 @@ import '@/design-system/tokens.css'
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSeoSettings()
+  const theme = await getTheme()
   const base = buildMetadata({
     title: settings.siteName,
     description: settings.seoDescription,
     path: '/',
     settings,
   })
+  const favicon = theme.faviconUrl || '/favicon.ico'
+  const iconPng = favicon.endsWith('.ico') ? '/icon.png' : favicon
   return {
     ...base,
     title: {
@@ -23,10 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: '/favicon.ico', sizes: '32x32' },
-        { url: '/icon.png', type: 'image/png', sizes: '180x180' },
+        { url: favicon },
+        { url: iconPng, type: 'image/png' },
       ],
-      apple: [{ url: '/icon.png', sizes: '180x180' }],
+      apple: [{ url: iconPng }],
     },
   }
 }

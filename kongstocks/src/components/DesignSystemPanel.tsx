@@ -27,6 +27,8 @@ export function DesignSystemPanel({ initPageResult, params, searchParams }: Admi
             <code>--main-color-one</code>）。字型為本機 Noto Sans TC + SC，不經 CDN。
           </p>
           <p>
+            <Link href="/admin/brand">更換 Logo / Favicon →</Link>
+            {' · '}
             <Link href="/admin/globals/theme">開啟自訂（顏色、導覽、密度） →</Link>
           </p>
 

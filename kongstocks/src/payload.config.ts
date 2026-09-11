@@ -32,6 +32,10 @@ export default buildConfig({
           Component: '/components/DesignSystemPanel#DesignSystemPanel',
           path: '/design-system',
         },
+        brand: {
+          Component: '/components/BrandPanel#BrandPanel',
+          path: '/brand',
+        },
       },
     },
   },

@@ -22,6 +22,20 @@ export const SiteSettings: GlobalConfig = {
             { name: 'tagline', type: 'text', defaultValue: DEFAULT_THEME.tagline },
             { name: 'footerText', type: 'textarea', defaultValue: DEFAULT_THEME.footerText },
             {
+              name: 'logo',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Logo',
+              admin: { description: 'Masthead mark. Transparent PNG recommended. Empty = /logo.png' },
+            },
+            {
+              name: 'favicon',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Favicon',
+              admin: { description: 'Browser tab icon (PNG or ICO). Empty = /favicon.ico' },
+            },
+            {
               name: 'nav',
               type: 'array',
               labels: { singular: '連結', plural: '導覽' },

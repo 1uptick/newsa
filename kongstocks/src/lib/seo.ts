@@ -5,6 +5,7 @@ import { DEFAULT_THEME } from '@/design-system/tokens'
 import { getTheme } from '@/lib/theme'
 import { categoryName, displaySlug, postPath } from '@/lib/site'
 import { firstBodyImage } from '@/lib/uploads'
+import { resolveMediaPath } from '@/lib/media'
 
 export const DEFAULT_SEO = {
   seoDescription: DEFAULT_THEME.tagline,
@@ -20,11 +21,7 @@ export type SeoSettings = {
   titleSuffix: string
   publisherBlurb: string
   defaultOgImage?: string
-}
-
-type MediaLike = {
-  url?: string | null
-  wpUrl?: string | null
+  logoUrl?: string
 }
 
 export function siteUrl() {
@@ -49,11 +46,10 @@ export function truncateMeta(value: string, max = 160) {
 }
 
 export function mediaUrl(image: unknown): string | undefined {
-  if (!image || typeof image === 'number' || typeof image === 'string') return undefined
-  const media = image as MediaLike
-  if (media.url) return absoluteUrl(media.url)
-  if (media.wpUrl) return media.wpUrl
-  return undefined
+  const path = resolveMediaPath(image)
+  if (!path) return undefined
+  if (/^https?:\/\//i.test(path)) return path
+  return absoluteUrl(path)
 }
 
 function normalizeTitleSuffix(value?: string | null) {
@@ -95,6 +91,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       titleSuffix: normalizeTitleSuffix(doc.titleSuffix),
       publisherBlurb: doc.publisherBlurb?.trim() || DEFAULT_SEO.publisherBlurb,
       defaultOgImage: mediaUrl(doc.defaultOgImage) || absoluteUrl('/og.png'),
+      logoUrl: theme.logoUrl || '/logo.png',
     }
   } catch {
     return {
@@ -104,6 +101,7 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       titleSuffix: DEFAULT_SEO.titleSuffix,
       publisherBlurb: DEFAULT_SEO.publisherBlurb,
       defaultOgImage: absoluteUrl('/og.png'),
+      logoUrl: theme.logoUrl || '/logo.png',
     }
   }
 }
@@ -170,7 +168,7 @@ export function organizationJsonLd(settings: SeoSettings) {
     name: settings.siteName,
     url: siteUrl(),
     description: settings.seoDescription,
-    logo: absoluteUrl('/logo.png'),
+    logo: settings.logoUrl ? absoluteUrl(settings.logoUrl) : absoluteUrl('/logo.png'),
   }
 }
 

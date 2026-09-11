@@ -497,6 +497,8 @@ export interface Theme {
   siteName: string;
   tagline?: string | null;
   footerText?: string | null;
+  logo?: (number | null) | Media;
+  favicon?: (number | null) | Media;
   nav?:
     | {
         label: string;
@@ -526,6 +528,8 @@ export interface ThemeSelect<T extends boolean = true> {
   siteName?: T;
   tagline?: T;
   footerText?: T;
+  logo?: T;
+  favicon?: T;
   nav?:
     | T
     | {

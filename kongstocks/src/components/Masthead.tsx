@@ -6,7 +6,7 @@ export function Masthead({ theme }: { theme: ThemeTokens }) {
     <header className="ks-masthead">
       <div className="ks-wrap ks-masthead-inner">
         <Link href="/" className="ks-wordmark">
-          <img src="/logo.png" alt="KongStocks" width={101} height={40} />
+          <img src={theme.logoUrl || '/logo.png'} alt={theme.siteName || 'KongStocks'} />
         </Link>
         <nav className="ks-nav">
           {theme.nav.map((item) => (
