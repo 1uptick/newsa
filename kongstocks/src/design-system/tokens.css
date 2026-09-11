@@ -44,7 +44,9 @@
 }
 
 :root {
-  --ks-header: #080808;
+  --ks-header: #ffffff;
+  --ks-header-ink: #111111;
+  --ks-logo-filter: brightness(0);
   --ks-accent: #e3338f;
   --ks-accent-ink: #ffffff;
   --ks-bg: #ffffff;
@@ -94,8 +96,9 @@ a:hover {
 
 .ks-masthead {
   background: var(--ks-header);
-  color: #fff;
+  color: var(--ks-header-ink);
   font-family: var(--ks-sans);
+  border-bottom: 1px solid var(--ks-line);
 }
 
 .ks-masthead a:hover {
@@ -120,6 +123,7 @@ a:hover {
   display: block;
   height: 28px;
   width: auto;
+  filter: var(--ks-logo-filter);
 }
 
 .ks-nav {
@@ -132,7 +136,7 @@ a:hover {
 }
 
 .ks-nav a {
-  color: #fff;
+  color: var(--ks-header-ink);
 }
 
 .ks-kicker {
