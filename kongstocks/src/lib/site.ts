@@ -7,12 +7,12 @@ export const NAV = [
   { href: '/category/hk-earnings', label: '業績' },
 ] as const
 
-export function postPath(publishedAt: string | Date, slug: string) {
-  const d = new Date(publishedAt)
+export function postPath(publishedAt: string | Date | null | undefined, slug: string | null | undefined) {
+  const d = new Date(publishedAt || Date.now())
   const year = String(d.getUTCFullYear())
   const month = String(d.getUTCMonth() + 1).padStart(2, '0')
   const day = String(d.getUTCDate()).padStart(2, '0')
-  return `/${year}/${month}/${day}/${slug}`
+  return `/${year}/${month}/${day}/${slug || ''}`
 }
 
 export function formatTime(value: string | Date) {

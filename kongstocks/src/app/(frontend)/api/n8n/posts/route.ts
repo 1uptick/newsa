@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   const payload = await getPayload({ config })
-  let categoryIds: (number | string)[] = []
+  let categoryIds: number[] = []
   if (body.categorySlugs?.length) {
     const cats = await payload.find({
       collection: 'categories',
