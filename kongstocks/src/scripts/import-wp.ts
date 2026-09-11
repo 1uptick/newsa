@@ -51,7 +51,7 @@ async function main() {
       continue
     }
 
-    const categoryIds: (number | string)[] = []
+    const categoryIds: number[] = []
     if (collection === 'posts' && item.categories?.length) {
       for (const cat of item.categories) {
         const found = await payload.find({
