@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { ArticleBody } from '@/components/ArticleBody'
+import { slugCandidates } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,7 @@ export default async function StaticPage({ params }: Args) {
   const result = await payload.find({
     collection: 'pages',
     where: {
-      and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }],
+      and: [{ slug: { in: slugCandidates(slug) } }, { _status: { equals: 'published' } }],
     },
     limit: 1,
   })

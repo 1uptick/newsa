@@ -20,6 +20,14 @@ type WpPost = {
   categories?: { slug: string; name: string; term_id?: number }[]
 }
 
+function decodeURIComponentSafe(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
 function loadExport(path: string): WpPost[] {
   const raw = JSON.parse(fs.readFileSync(path, 'utf8'))
   if (Array.isArray(raw)) return raw as WpPost[]
@@ -77,7 +85,7 @@ async function main() {
         collection === 'posts'
           ? {
               title: item.post_title,
-              slug: item.post_name,
+              slug: decodeURIComponentSafe(item.post_name),
               excerpt: item.post_excerpt,
               bodyHtml: item.post_content,
               publishedAt: item.post_date_gmt || new Date().toISOString(),
@@ -88,7 +96,7 @@ async function main() {
             }
           : {
               title: item.post_title,
-              slug: item.post_name,
+              slug: decodeURIComponentSafe(item.post_name),
               bodyHtml: item.post_content,
               publishedAt: item.post_date_gmt,
               wpId: item.ID,

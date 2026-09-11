@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { ArticleBody } from '@/components/ArticleBody'
 import { Kicker } from '@/components/Kicker'
-import { categoryName, formatTime } from '@/lib/site'
+import { categoryName, formatTime, slugCandidates } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,7 @@ export default async function ArticlePage({ params }: Args) {
   const result = await payload.find({
     collection: 'posts',
     where: {
-      and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }],
+      and: [{ slug: { in: slugCandidates(slug) } }, { _status: { equals: 'published' } }],
     },
     limit: 1,
     depth: 1,
