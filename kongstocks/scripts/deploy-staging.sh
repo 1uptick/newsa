@@ -29,13 +29,12 @@ fi
 
 cd "$ROOT"
 
-if [[ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]]; then
-  # Match the VPS Node 20 runtime so the local .next is compatible.
-  # shellcheck disable=SC1091
-  source "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
-  nvm use 20 >/dev/null
+NODE20_BIN="${KS_NODE20_BIN:-$HOME/.nvm/versions/node/v20.20.2/bin}"
+if [[ -x "$NODE20_BIN/node" ]]; then
+  export PATH="$NODE20_BIN:$PATH"
+  hash -r
 fi
-echo "==> Node $(node -v) ($(which node))"
+echo "==> Node $(node -v) ($(command -v node))"
 
 echo "==> Fetch staging env from $HOST"
 ssh "$HOST" "cat $REMOTE_ENV" > "$ENV_FILE"
