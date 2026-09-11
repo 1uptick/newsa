@@ -1,0 +1,11 @@
+node_modules
+.next
+.payload
+.env
+.env.local
+.env.staging
+.env.prod
+media
+*.log
+tsconfig.tsbuildinfo
+next-env.d.ts

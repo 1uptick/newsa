@@ -1,0 +1,38 @@
+services:
+  postgres-staging:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kongstocks_staging
+      POSTGRES_PASSWORD: ${POSTGRES_STAGING_PASSWORD}
+      POSTGRES_DB: kongstocks_staging
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - kongstocks_pg_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kongstocks_staging -d kongstocks_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-prod:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kongstocks_prod
+      POSTGRES_PASSWORD: ${POSTGRES_PROD_PASSWORD}
+      POSTGRES_DB: kongstocks_prod
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - kongstocks_pg_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kongstocks_prod -d kongstocks_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kongstocks_pg_staging:
+  kongstocks_pg_prod:
