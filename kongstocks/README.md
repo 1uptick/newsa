@@ -2,7 +2,7 @@
 
 Next.js + Payload CMS + Postgres. Hosted on Hostinger VPS `72.62.194.142`.
 
-This phase uses a **plain layout**. The design system is intentionally deferred until after WordPress migration.
+Public chrome is Bloomberg-like news layout. Highlight color is KongStocks `#E3338F`. Fonts are local Noto Sans/Serif (TC + SC) in `public/fonts`. Design tokens and specimens live in **Admin → 設計系統**.
 
 ## Local
 

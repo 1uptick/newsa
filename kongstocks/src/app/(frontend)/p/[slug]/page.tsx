@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { ArticleBody } from '@/components/ArticleBody'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,11 +21,9 @@ export default async function StaticPage({ params }: Args) {
   if (!page) notFound()
 
   return (
-    <main>
-      <h2>{page.title}</h2>
-      {page.bodyHtml ? (
-        <div className="article-body" dangerouslySetInnerHTML={{ __html: page.bodyHtml }} />
-      ) : null}
+    <main className="ks-article">
+      <h1>{page.title}</h1>
+      <ArticleBody html={page.bodyHtml} content={'content' in page ? page.content : undefined} />
     </main>
   )
 }

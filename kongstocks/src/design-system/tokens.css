@@ -1,0 +1,316 @@
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSansTC-latin-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSansTC-latin-700.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSansTC-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSansTC-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSansSC-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSansSC-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Serif TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSerifTC-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Serif TC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSerifTC-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSerifSC-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSerifSC-700.woff2') format('woff2');
+}
+
+:root {
+  --ks-header: #080808;
+  --ks-accent: #e3338f;
+  --ks-accent-ink: #ffffff;
+  --ks-bg: #ffffff;
+  --ks-surface: #ffffff;
+  --ks-ink: #111111;
+  --ks-muted: #5c5c5c;
+  --ks-line: #d8d8d8;
+  --ks-up: #0a8f3d;
+  --ks-down: #c8102e;
+  --ks-pad: 0.7;
+  --ks-max: 1180px;
+  --ks-sans: 'Noto Sans TC', 'Noto Sans SC', system-ui, sans-serif;
+  --ks-serif: 'Noto Serif TC', 'Noto Serif SC', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ks-bg);
+  color: var(--ks-ink);
+  font-family: var(--ks-serif);
+  line-height: 1.55;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ks-accent);
+}
+
+.ks-shell {
+  min-height: 100vh;
+}
+
+.ks-wrap {
+  width: min(var(--ks-max), calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.ks-masthead {
+  background: var(--ks-header);
+  color: #fff;
+  font-family: var(--ks-sans);
+}
+
+.ks-masthead a:hover {
+  color: var(--ks-accent);
+}
+
+.ks-masthead-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: calc(0.85rem * var(--ks-pad)) 0;
+}
+
+.ks-wordmark {
+  font-family: var(--ks-sans);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.ks-wordmark span {
+  color: var(--ks-accent);
+}
+
+.ks-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ks-nav a {
+  color: #fff;
+}
+
+.ks-kicker {
+  font-family: var(--ks-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ks-accent);
+  margin: 0 0 0.35rem;
+}
+
+.ks-meta {
+  font-family: var(--ks-sans);
+  font-size: 0.75rem;
+  color: var(--ks-muted);
+}
+
+.ks-home {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.95fr;
+  gap: 0 1.5rem;
+  padding: calc(1.25rem * var(--ks-pad)) 0 3rem;
+}
+
+@media (max-width: 900px) {
+  .ks-home {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ks-lead {
+  border-right: 1px solid var(--ks-line);
+  padding-right: 1.5rem;
+}
+
+.ks-lead h2 {
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1.2;
+  margin: 0 0 0.6rem;
+  font-weight: 700;
+}
+
+.ks-lead p {
+  margin: 0.6rem 0 0;
+  color: var(--ks-muted);
+}
+
+.ks-secondaries {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-right: 1px solid var(--ks-line);
+  padding-right: 1.25rem;
+}
+
+.ks-card {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ks-line);
+}
+
+.ks-card:last-child {
+  border-bottom: 0;
+}
+
+.ks-card h3 {
+  font-size: 1.05rem;
+  line-height: 1.3;
+  margin: 0;
+  font-weight: 700;
+}
+
+.ks-list h2,
+.ks-section-title {
+  font-family: var(--ks-sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--ks-ink);
+  padding-bottom: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.ks-list-item {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--ks-line);
+}
+
+.ks-list-item h3 {
+  font-size: 0.98rem;
+  margin: 0;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.ks-article {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: calc(1.5rem * var(--ks-pad)) 0 3.5rem;
+}
+
+.ks-article h1 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.22;
+  margin: 0 0 0.75rem;
+}
+
+.ks-article-body {
+  margin-top: 1.4rem;
+  font-size: 1.05rem;
+}
+
+.ks-article-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ks-footer {
+  font-family: var(--ks-sans);
+  font-size: 0.75rem;
+  color: var(--ks-muted);
+  border-top: 1px solid var(--ks-line);
+  padding: 1.25rem 0 2rem;
+}
+
+.ks-btn {
+  font-family: var(--ks-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 0;
+  background: var(--ks-accent);
+  color: var(--ks-accent-ink);
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+}
+
+.ks-btn-ghost {
+  background: transparent;
+  color: var(--ks-ink);
+  border: 1px solid var(--ks-ink);
+}
+
+.ks-swatch {
+  width: 72px;
+  height: 48px;
+  border: 1px solid var(--ks-line);
+}
+
+.ks-type-sample {
+  margin: 0 0 0.75rem;
+}

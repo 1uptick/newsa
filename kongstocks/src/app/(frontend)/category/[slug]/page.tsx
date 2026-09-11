@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { postPath } from '@/lib/site'
+import { formatTime, postPath } from '@/lib/site'
+import { StoryList } from '@/components/StoryList'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,16 +29,15 @@ export default async function CategoryPage({ params }: Args) {
   })
 
   return (
-    <main>
-      <h2>{category.name}</h2>
-      {posts.docs.map((post) => (
-        <article className="list-item" key={post.id}>
-          <h2>
-            <Link href={postPath(post.publishedAt, post.slug)}>{post.title}</Link>
-          </h2>
-          <div className="meta">{new Date(post.publishedAt).toLocaleString('zh-HK')}</div>
-        </article>
-      ))}
+    <main className="ks-article">
+      <StoryList
+        title={category.name}
+        items={posts.docs.map((post) => ({
+          href: postPath(post.publishedAt, post.slug),
+          title: post.title,
+          time: formatTime(post.publishedAt),
+        }))}
+      />
     </main>
   )
 }

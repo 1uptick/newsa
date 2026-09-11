@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { DEFAULT_THEME } from '@/design-system/tokens'
 
 const CATEGORIES = [
   { name: '港股', slug: 'hk' },
@@ -81,6 +82,21 @@ async function main() {
     })
     console.log('Created sample post')
   }
+
+  await payload.updateGlobal({
+    slug: 'theme',
+    data: {
+      siteName: DEFAULT_THEME.siteName,
+      tagline: DEFAULT_THEME.tagline,
+      footerText: DEFAULT_THEME.footerText,
+      accent: DEFAULT_THEME.accent,
+      headerBg: DEFAULT_THEME.headerBg,
+      background: DEFAULT_THEME.background,
+      density: DEFAULT_THEME.density,
+      nav: DEFAULT_THEME.nav,
+    },
+  })
+  console.log('Seeded theme global')
 
   process.exit(0)
 }

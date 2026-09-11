@@ -11,6 +11,7 @@ import { Categories } from './collections/Categories'
 import { Authors } from './collections/Authors'
 import { Posts } from './collections/Posts'
 import { Pages } from './collections/Pages'
+import { SiteSettings } from './globals/SiteSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -24,8 +25,18 @@ export default buildConfig({
     meta: {
       titleSuffix: ' · KongStocks CMS',
     },
+    components: {
+      afterNavLinks: ['/components/DesignSystemNavLink#DesignSystemNavLink'],
+      views: {
+        designSystem: {
+          Component: '/components/DesignSystemPanel#DesignSystemPanel',
+          path: '/design-system',
+        },
+      },
+    },
   },
   collections: [Users, Media, Categories, Authors, Posts, Pages],
+  globals: [SiteSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

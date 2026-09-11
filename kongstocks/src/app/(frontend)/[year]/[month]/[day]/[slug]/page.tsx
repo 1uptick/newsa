@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { ArticleBody } from '@/components/ArticleBody'
+import { Kicker } from '@/components/Kicker'
+import { categoryName, formatTime } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,16 +26,11 @@ export default async function ArticlePage({ params }: Args) {
   if (!post) notFound()
 
   return (
-    <main>
-      <article>
-        <h2>{post.title}</h2>
-        <div className="meta">{new Date(post.publishedAt).toLocaleString('zh-HK')}</div>
-        {post.bodyHtml ? (
-          <div className="article-body" dangerouslySetInnerHTML={{ __html: post.bodyHtml }} />
-        ) : (
-          <p>No content.</p>
-        )}
-      </article>
+    <main className="ks-article">
+      <Kicker>{categoryName(post) || '新聞'}</Kicker>
+      <h1>{post.title}</h1>
+      <div className="ks-meta">{formatTime(post.publishedAt)}</div>
+      <ArticleBody html={post.bodyHtml} content={'content' in post ? post.content : undefined} />
     </main>
   )
 }

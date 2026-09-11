@@ -1,34 +1,24 @@
-import Link from 'next/link'
-import type { ReactNode } from 'react'
-import { NAV } from '@/lib/site'
-import './globals.css'
+import type { ReactNode, CSSProperties } from 'react'
+import { Masthead } from '@/components/Masthead'
+import { getTheme } from '@/lib/theme'
+import { themeToCssVars } from '@/design-system/tokens'
+import '@/design-system/tokens.css'
 
 export const metadata = {
   title: 'KongStocks',
   description: '港股新聞及深度分析',
 }
 
-export default function FrontendLayout({ children }: { children: ReactNode }) {
+export default async function FrontendLayout({ children }: { children: ReactNode }) {
+  const theme = await getTheme()
   return (
     <html lang="zh-Hant">
-      <body>
-        <div className="wrap">
-          <header className="site">
-            <h1>
-              <Link href="/">KongStocks</Link>
-            </h1>
-            <nav className="site">
-              {NAV.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  {item.label}
-                </Link>
-              ))}
-              <Link href="/admin">CMS</Link>
-            </nav>
-          </header>
-          {children}
-          <footer className="site">Plain layout · design system comes after migration</footer>
-        </div>
+      <body className="ks-shell" style={themeToCssVars(theme) as CSSProperties}>
+        <Masthead theme={theme} />
+        <div className="ks-wrap">{children}</div>
+        <footer className="ks-footer">
+          <div className="ks-wrap">{theme.footerText}</div>
+        </footer>
       </body>
     </html>
   )

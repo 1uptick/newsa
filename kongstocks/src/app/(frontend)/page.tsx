@@ -1,7 +1,8 @@
-import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { postPath } from '@/lib/site'
+import { categoryName, formatTime, postPath } from '@/lib/site'
+import { StoryCard } from '@/components/StoryCard'
+import { StoryList } from '@/components/StoryList'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,23 +12,49 @@ export default async function HomePage() {
     collection: 'posts',
     where: { _status: { equals: 'published' } },
     sort: '-publishedAt',
-    limit: 30,
+    limit: 24,
     depth: 1,
   })
 
+  const docs = posts.docs
+  const lead = docs[0]
+  const secondaries = docs.slice(1, 4)
+  const rest = docs.slice(4)
+
   return (
-    <main>
-      <h2>最新文章</h2>
-      {posts.docs.length === 0 ? <p>No posts yet.</p> : null}
-      {posts.docs.map((post) => (
-        <article className="list-item" key={post.id}>
-          <h2>
-            <Link href={postPath(post.publishedAt, post.slug)}>{post.title}</Link>
-          </h2>
-          <div className="meta">{new Date(post.publishedAt).toLocaleString('zh-HK')}</div>
-          {post.excerpt ? <p>{post.excerpt}</p> : null}
-        </article>
-      ))}
+    <main className="ks-home">
+      {lead ? (
+        <StoryCard
+          lead
+          href={postPath(lead.publishedAt, lead.slug)}
+          title={lead.title}
+          kicker={categoryName(lead) || '頭條'}
+          time={formatTime(lead.publishedAt)}
+          excerpt={lead.excerpt}
+        />
+      ) : (
+        <p>暫無文章。</p>
+      )}
+      <div className="ks-secondaries">
+        {secondaries.map((post) => (
+          <StoryCard
+            key={post.id}
+            href={postPath(post.publishedAt, post.slug)}
+            title={post.title}
+            kicker={categoryName(post)}
+            time={formatTime(post.publishedAt)}
+          />
+        ))}
+      </div>
+      <StoryList
+        title="最新"
+        items={rest.map((post) => ({
+          href: postPath(post.publishedAt, post.slug),
+          title: post.title,
+          kicker: categoryName(post),
+          time: formatTime(post.publishedAt),
+        }))}
+      />
     </main>
   )
 }
