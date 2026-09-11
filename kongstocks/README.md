@@ -1,63 +1,12 @@
-# KongStocks
+# KongStocks moved
 
-Next.js + Payload CMS + Postgres. Hosted on Hostinger VPS `72.62.194.142`.
+KongStocks source is no longer in this public repository.
 
-Public chrome is Bloomberg-like news layout. Highlight color is KongStocks `#E3338F`. Fonts are local Noto Sans TC + SC in `public/fonts`. Design tokens and specimens live in **Admin → 設計系統**.
-
-## Local
+The app lives in the **private** GitHub repo [1uptick/kongstocks](https://github.com/1uptick/kongstocks). Staging remains `https://staging.kongstocks.com/`.
 
 ```bash
-cp .env.example .env
-npm install
-npm run dev
+cd ~/Desktop
+git clone https://github.com/1uptick/kongstocks.git
 ```
 
-## VPS layout
-
-| Path | Role |
-|---|---|
-| `/opt/kongstocks/app` | Application source |
-| `/opt/kongstocks/wp-content/uploads` | Live WP uploads (outside the app tree) |
-| `/opt/kongstocks/deploy/.env.staging` / `.env.prod` / `.env.postgres` | Secrets (not in git) |
-| `127.0.0.1:5433` | Staging Postgres |
-| `127.0.0.1:5434` | Production Postgres |
-| `127.0.0.1:3010` | Staging Next.js |
-| `127.0.0.1:3011` | Production Next.js |
-| `/var/backups/kongstocks` | Nightly `pg_dump` (7 days) |
-
-Nginx is used instead of Caddy because this VPS already terminates TLS on nginx for 1uptick sites.
-
-## Deploy
-
-Build staging **locally**, then push the prebuilt `.next` to the VPS. The server only restarts PM2 — it does not run `next build`.
-
-```bash
-# from this repo, on a workstation with SSH host `kongstocks-vps`
-cd kongstocks
-./scripts/deploy-staging.sh
-```
-
-`deploy-staging.sh` pulls `/opt/kongstocks/deploy/.env.staging` for the build, tunnels staging Postgres if the URL is `127.0.0.1:5433`, runs `npm run build` here, rsyncs the tree (except `node_modules` and env files), and restarts `kongstocks-staging`.
-
-```bash
-# on the VPS (restart only; used by the local script)
-/opt/kongstocks/app/scripts/restart-staging.sh
-/opt/kongstocks/app/scripts/promote.sh   # 1-click go-live
-```
-
-## n8n
-
-Point workflows at `POST /api/n8n/posts` with `Authorization: Bearer $PAYLOAD_API_KEY`. See [scripts/n8n-switch.md](scripts/n8n-switch.md).
-
-## WordPress import
-
-```bash
-WP_EXPORT=/path/to/wp-posts.json npm run import:wp
-```
-
-Post images stay on disk at `/opt/kongstocks/wp-content/uploads` and are served by nginx at `/wp-content/uploads/`. Re-sync from Hostinger (resume-able) and rewrite imported HTML before DNS cutover:
-
-```bash
-/opt/kongstocks/scripts/sync-wp-uploads.sh
-cd /opt/kongstocks/app && set -a && source /opt/kongstocks/deploy/.env.staging && set +a && npm run rewrite:uploads
-```
+Do not publish that repository. This folder is only a pointer so the public `newsa` tree does not keep a live copy of the site.
