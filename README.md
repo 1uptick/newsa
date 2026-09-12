@@ -1,20 +1,39 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Newsa Portal
 
-# Run and deploy your AI Studio app
+React + Express app for financial content and market intelligence. Backend data lives in **Supabase**; auth in **Firebase**; news content in **Airtable**.
 
-This contains everything you need to run your app locally.
+## Quick start (local staging against live DB)
 
-View your app in AI Studio: https://ai.studio/apps/a55d4bc5-8995-489d-be0d-720251dd2ecb
+```bash
+npm install
+cp .env.staging.example .env.staging   # fill with production credentials
+npm run dev:staging
+```
 
-## Run Locally
+Open http://localhost:5001. See [STAGING.md](./STAGING.md) for the full migration guide from VPS staging.
 
-**Prerequisites:**  Node.js
+## Other commands
 
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Local dev using `.env` |
+| `npm run build` | Build SPA to `dist/` |
+| `npm start` | Production server (SPA + API) |
+| `npm run security-check` | Check for secret exposure in client code |
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Which services do I need?
+
+| Service | When |
+|---------|------|
+| **Airtable** | News feed, capital keywords, SEO topics |
+| **Firebase** | Login, register, admin users |
+| **Supabase** | Required for latest code (users, invites, article edits) |
+
+If production still uses `newsa.db` (SQLite), run `./scripts/audit-production.sh` on the VPS and see [STAGING.md](./STAGING.md).
+
+## Documentation
+
+- [STAGING.md](./STAGING.md) — local staging + SQLite → Supabase migration
+- [DEPLOY.md](./DEPLOY.md) — production VPS deployment
+- [DOMAIN-SETUP.md](./DOMAIN-SETUP.md) — `portal.newsa.io` and Firebase domains
+- [SECURITY.md](./SECURITY.md) — secret handling

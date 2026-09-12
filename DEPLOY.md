@@ -1,61 +1,109 @@
-# Deploying Newsa (Option B: Supabase + Cloud Run)
+# Deploying Newsa (production on VPS)
 
-The app now uses **Supabase** for all backend data (user roles, invitations, groups, password reset tokens). SQLite has been removed.
+Production runs on your **VPS** at **https://portal.newsa.io**. Staging is **local only** and uses the live database — see [STAGING.md](./STAGING.md).
 
-## 1. Run the Supabase schema
+The app uses **Supabase** for backend data (user roles, invitations, groups, password reset tokens). SQLite has been removed.
 
-In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run the contents of `supabase/schema.sql`. This creates:
+## Architecture
 
-- `groups`
-- `user_roles`
-- `invitations`
-- `password_reset_tokens`
-- (and keeps existing `capital_articles`)
+```
+Production (VPS)                         Shared services
+┌─────────────────────────┐              ┌─────────────┐
+│  Node (server.ts)       │─────────────▶│  Supabase   │
+│  SPA (dist/) + /api/*   │              │  PostgreSQL │
+│  portal.newsa.io        │              │  + Storage  │
+└─────────────────────────┘              └─────────────┘
+         │                               ┌─────────────┐
+         └──────────────────────────────▶│  Firebase   │
+                                         │  Auth       │
+                                         └─────────────┘
+                                         ┌─────────────┐
+                                         └─────────────▶│  Airtable   │
+                                                      └─────────────┘
 
-## 2. Set environment variables
+Local staging (developer laptop)
+┌─────────────────────────┐
+│  npm run dev:staging    │── same Supabase / Firebase / Airtable as above
+│  localhost:5001         │
+└─────────────────────────┘
+```
 
-Ensure these are set where the server runs (local `.env`, Cloud Run, or Render):
+## 0. Audit current production
 
-- **Required for auth/data:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-- **Required for Firebase Auth:** `FIREBASE_SERVICE_ACCOUNT` (full JSON string) or path to key file
-- **Required for email:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `APP_BASE_URL`
-- Plus Airtable, OpenRouter, and VITE_* as in `.env.example`
+On the VPS, run `./scripts/audit-production.sh` to check whether you use **SQLite** (`newsa.db`) or **Supabase**. If SQLite, complete the migration in [STAGING.md](./STAGING.md) (Path A) before deploying latest code.
 
-## 3. Deploy the API (choose one)
+## 1. Run the Supabase schema (one-time)
 
-### A. Google Cloud Run (works with Firebase Hosting)
+In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run `supabase/schema.sql`. Create Storage bucket **`article-images`** (public).
 
-1. Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and run `gcloud auth login` and `gcloud config set project newsa-ea4dc`.
-2. Build and deploy:
-   ```bash
-   gcloud run deploy newsa-api --source . --region us-central1 --allow-unauthenticated --set-env-vars "NODE_ENV=production"
-   ```
-   Add all env vars in the Cloud Run console (Variables & Secrets) or via `--set-env-vars "KEY=value"`.
-3. Note the Cloud Run URL (e.g. `https://newsa-api-xxxxx-uc.a.run.app`).
+## 2. Production environment on the VPS
 
-### B. Render
+Create `.env` on the server (never commit it). Copy from `.env.example` and set:
 
-1. Connect the GitHub repo at [render.com](https://render.com).
-2. New **Web Service** → Build: `npm install && npm run build`, Start: `npm start`.
-3. Add all environment variables in the Render dashboard.
-4. Set `APP_BASE_URL` to your Render URL (e.g. `https://newsa-api.onrender.com`).
+| Variable | Production value |
+|----------|------------------|
+| `NODE_ENV` | `production` (set by start command or systemd) |
+| `PORT` | `5001` (or your internal port) |
+| `APP_BASE_URL` | `https://portal.newsa.io` |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Live Supabase project |
+| `FIREBASE_SERVICE_ACCOUNT` | Live Firebase service account JSON |
+| `VITE_FIREBASE_*` | Live Firebase client config (needed at **build** time) |
+| `AIRTABLE_*` | Live Airtable base |
+| `SMTP_*` | Hostinger / production mail |
+| `OPENROUTER_API_KEY` | If using SEO generation |
 
-## 4. Point the frontend at the API
+Do **not** set `VITE_API_BASE_URL` on the VPS — the unified server serves API and SPA on the same origin.
 
-- If you use **Firebase Hosting** for the frontend only, set `VITE_API_BASE_URL` to your API URL (Cloud Run or Render) and rebuild:
-  ```bash
-  VITE_API_BASE_URL=https://your-api-url.run.app npm run build
-  firebase deploy
-  ```
-- Or add Hosting rewrites so `/api` is proxied to Cloud Run (see [Firebase docs](https://firebase.google.com/docs/hosting/cloud-run)).
+## 3. First deploy on the VPS
 
-## 5. Custom domain
+```bash
+git clone <your-repo-url> newsa
+cd newsa
+cp .env.example .env   # edit with production secrets
+npm ci
+npm run build
+NODE_ENV=production PORT=5001 npm start
+```
 
-Point `portal.newsa.io` (or your domain) to either:
+Put nginx (or Caddy) in front with HTTPS:
 
-- The Cloud Run / Render URL (if the app serves both SPA and API), or  
-- Firebase Hosting (SPA) and set `VITE_API_BASE_URL` to the API URL.
+- `portal.newsa.io:443` → `http://127.0.0.1:5001`
+- Proxy headers: `X-Forwarded-For`, `X-Forwarded-Proto`
+
+Use **pm2** or **systemd** to keep the process running. Example pm2:
+
+```bash
+pm2 start npm --name newsa -- start
+pm2 save
+```
+
+Subsequent deploys:
+
+```bash
+./scripts/deploy-production.sh
+```
+
+## 4. Custom domain & Firebase
+
+See [DOMAIN-SETUP.md](./DOMAIN-SETUP.md):
+
+- Add `portal.newsa.io` to Firebase **Authorized domains**
+- Point DNS to the VPS and enable HTTPS (Let's Encrypt)
+
+## 5. Local staging (not on VPS)
+
+Developers run staging locally against the **live** database:
+
+```bash
+cp .env.staging.example .env.staging
+# fill with production credentials
+npm run dev:staging
+```
+
+Full guide: [STAGING.md](./STAGING.md).
 
 ---
 
-**Summary:** Run `supabase/schema.sql` in Supabase, deploy the Node app to Cloud Run or Render with the right env vars, then build the frontend with `VITE_API_BASE_URL` set and deploy to Firebase Hosting (or your host).
+## Alternative hosts (optional)
+
+The repo also includes configs for **Cloud Run**, **Render**, and **Firebase Hosting** (split frontend/API). The recommended setup for this project is the **unified VPS** model above.

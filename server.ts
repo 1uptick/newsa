@@ -10,7 +10,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
-import { config, isAirtableConfigured, isSupabaseConfigured, isOpenRouterConfigured } from "./server/config.js";
+import {
+  config,
+  isAirtableConfigured,
+  isSupabaseConfigured,
+  isOpenRouterConfigured,
+  appEnvironment,
+  isStaging,
+} from "./server/config.js";
 import { cache, CACHE_KEYS, CACHE_TTL } from "./server/cache.js";
 import * as db from "./server/db.js";
 
@@ -122,7 +129,9 @@ if (!isOpenRouterConfigured) {
 // In production, set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, APP_BASE_URL in the host environment.
 // If SMTP_PASS contains $ or %, avoid shell interpolation (e.g. use env file or quote in export).
 let mailTransporter: nodemailer.Transporter | null = null;
-if (config.smtp.host && config.smtp.user && config.smtp.pass) {
+if (config.smtp.disabled) {
+  console.warn("SMTP disabled (SMTP_DISABLED=true). Invitation and password-reset emails will not be sent.");
+} else if (config.smtp.host && config.smtp.user && config.smtp.pass) {
   try {
     mailTransporter = nodemailer.createTransport({
       host: config.smtp.host,
@@ -1586,5 +1595,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT} (${appEnvironment})`);
+  if (isStaging) {
+    console.warn(
+      "STAGING MODE: connected to live Supabase/Airtable/Firebase. Writes affect production data."
+    );
+  }
 });
