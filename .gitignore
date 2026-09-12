@@ -6,4 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+!.env.staging.example
 newsa.db

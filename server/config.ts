@@ -12,7 +12,33 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+/** Which env file to load: `.env` (default), `.env.staging`, or custom via ENV_FILE. */
+function loadEnvFiles(): void {
+  const envFile = process.env.ENV_FILE?.trim() || ".env";
+  const envPath = path.isAbsolute(envFile) ? envFile : path.resolve(process.cwd(), envFile);
+  dotenv.config({ path: envPath });
+  if (envFile !== ".env") {
+    dotenv.config({ path: path.resolve(process.cwd(), ".env"), override: false });
+  }
+}
+
+loadEnvFiles();
+
+export type AppEnvironment = "local" | "staging" | "production";
+
+function resolveEnvironment(): AppEnvironment {
+  const explicit = process.env.NEW_SA_ENV?.trim().toLowerCase();
+  if (explicit === "staging" || explicit === "production" || explicit === "local") {
+    return explicit;
+  }
+  if (process.env.ENV_FILE?.includes("staging")) return "staging";
+  if (process.env.NODE_ENV === "production") return "production";
+  return "local";
+}
+
+export const appEnvironment: AppEnvironment = resolveEnvironment();
+export const isStaging = appEnvironment === "staging";
+export const isProduction = appEnvironment === "production";
 
 function loadServiceAccountJson(): string | null {
   const fromEnv =
@@ -75,7 +101,9 @@ export const config = {
   },
 
   // SMTP (server-only). In production set SMTP_* and APP_BASE_URL in the host environment.
+  // Set SMTP_DISABLED=true in local staging to avoid sending real emails.
   smtp: {
+    disabled: process.env.SMTP_DISABLED === "true" || process.env.SMTP_DISABLED === "1",
     host: process.env.SMTP_HOST?.trim() ?? "",
     port: parseInt(process.env.SMTP_PORT || "587", 10),
     secure: process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1",
