@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "dev:staging": "ENV_FILE=.env.staging NEW_SA_ENV=staging tsx server.ts",
+    "migrate:sqlite": "node scripts/migrate-sqlite-to-supabase.mjs",
+    "audit:production": "bash scripts/audit-production.sh",
     "build": "vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
@@ -46,6 +48,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "better-sqlite3": "^12.4.1",
     "@types/compression": "^1.8.1",
     "@types/dompurify": "^3.0.5",
     "@types/express": "^4.17.21",

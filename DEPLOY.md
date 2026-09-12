@@ -28,9 +28,13 @@ Local staging (developer laptop)
 └─────────────────────────┘
 ```
 
+## 0. Audit current production
+
+On the VPS, run `./scripts/audit-production.sh` to check whether you use **SQLite** (`newsa.db`) or **Supabase**. If SQLite, complete the migration in [STAGING.md](./STAGING.md) (Path A) before deploying latest code.
+
 ## 1. Run the Supabase schema (one-time)
 
-In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run `supabase/schema.sql`.
+In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor**, run `supabase/schema.sql`. Create Storage bucket **`article-images`** (public).
 
 ## 2. Production environment on the VPS
 
